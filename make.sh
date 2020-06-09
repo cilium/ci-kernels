@@ -8,7 +8,7 @@ readonly build_dir="${script_dir}/build"
 
 mkdir -p "${build_dir}"
 
-readonly kernel_versions=("4.9.198" "4.14.176" "4.19.81" "5.4.5")
+readonly kernel_versions=("4.9.226" "4.14.183" "4.19.127" "5.4.45" "5.7.1")
 for kernel_version in "${kernel_versions[@]}"; do
 	if [[ -f "linux-${kernel_version}.bz" ]]; then
 		echo Skipping ${kernel_version}, it already exist
@@ -17,6 +17,7 @@ for kernel_version in "${kernel_versions[@]}"; do
 
 	src_dir="${build_dir}/linux-${kernel_version}"
 	archive="${build_dir}/linux-${kernel_version}.tar.xz"
+	major_version="$(echo "$kernel_version" | cut -d . -f 1-2)"
 
 	test -e "${archive}" || curl --fail -L https://cdn.kernel.org/pub/linux/kernel/v${kernel_version%%.*}.x/linux-${kernel_version}.tar.xz -o "${archive}"
 	test -d "${src_dir}" || tar --xz -xf "${archive}" -C "${build_dir}"
@@ -31,6 +32,10 @@ for kernel_version in "${kernel_versions[@]}"; do
 	make -j7 bzImage
 
 	mv "arch/x86/boot/bzImage" "${script_dir}/linux-${kernel_version}.bz"
+	popd
+
+	pushd "${script_dir}"
+	ln -sf "linux-${kernel_version}.bz" "linux-${major_version}.bz"
 	popd
 done
 
