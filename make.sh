@@ -34,9 +34,7 @@ for kernel_version in "${kernel_versions[@]}"; do
 	mv "arch/x86/boot/bzImage" "${script_dir}/linux-${kernel_version}.bz"
 	popd
 
-	pushd "${script_dir}"
-	ln -sf "linux-${kernel_version}.bz" "linux-${major_version}.bz"
-	popd
+	cp -f "${script_dir}/linux-${kernel_version}.bz" "${script_dir}/linux-${major_version}.bz"
 done
 
 
