@@ -9,7 +9,7 @@ readonly build_dir="${script_dir}/build"
 
 mkdir -p "${build_dir}"
 
-readonly kernel_versions=("4.9.237" "4.14.199" "4.19.148" "5.4.68")
+readonly kernel_versions=("4.9.237" "4.14.199" "4.19.148" "5.4.68" "5.9.6")
 for kernel_version in "${kernel_versions[@]}"; do
 	if [[ -f "linux-${kernel_version}.bz" ]]; then
 		echo "Skipping ${kernel_version}, it already exist"
