@@ -4,12 +4,13 @@ set -eu
 set -o pipefail
 
 readonly clang="${CLANG:-clang-10}"
+readonly llc="${LLC:=llc-10}"
 readonly script_dir="$(cd "$(dirname "$0")"; pwd)"
 readonly build_dir="${script_dir}/build"
 
 mkdir -p "${build_dir}"
 
-readonly kernel_versions=("4.9.241" "4.14.204" "4.19.155" "5.4.75" "5.9.6")
+readonly kernel_versions=("4.9.248" "4.14.212" "4.19.163" "5.4.83" "5.9.6")
 for kernel_version in "${kernel_versions[@]}"; do
 	if [[ -f "linux-${kernel_version}.bz" ]]; then
 		echo "Skipping ${kernel_version}, it already exist"
@@ -33,7 +34,9 @@ for kernel_version in "${kernel_versions[@]}"; do
 	make -j7 bzImage
 
 	cp "arch/x86/boot/bzImage" "${script_dir}/linux-${kernel_version}.bz"
-	cp -f "${script_dir}/linux-${kernel_version}.bz" "${script_dir}/linux-${series}.bz"
+	if [ "$kernel_version" != "$series" ]; then
+		cp -f "${script_dir}/linux-${kernel_version}.bz" "${script_dir}/linux-${series}.bz"
+	fi
 
 	if [ -d "tools/testing/selftests/bpf" ]; then
 		if [ "${series}" = "4.14" ]; then
@@ -42,6 +45,8 @@ for kernel_version in "${kernel_versions[@]}"; do
 		else
 			export CLANG="$clang"
 		fi
+
+		export LLC="$llc"
 
 		make -C tools/testing/selftests/bpf
 		while IFS= read -r obj; do
@@ -54,7 +59,9 @@ for kernel_version in "${kernel_versions[@]}"; do
 				echo "$obj"
 			fi
 		done < <(find tools/testing/selftests/bpf -type f -name "*.o") | tar cvjf "${script_dir}/linux-${kernel_version}-selftests-bpf.bz" -T -
-		cp -f "${script_dir}/linux-${kernel_version}-selftests-bpf.bz" "${script_dir}/linux-${series}-selftests-bpf.bz"
+		if [ "$kernel_version" != "$series" ]; then
+			cp -f "${script_dir}/linux-${kernel_version}-selftests-bpf.bz" "${script_dir}/linux-${series}-selftests-bpf.bz"
+		fi
 	fi
 	popd
 done
