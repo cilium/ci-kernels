@@ -20,9 +20,10 @@ fetch_and_configure() {
 
 	cd "${src_dir}"
 	if [[ ! -f custom.config || "${script_dir}/config" -nt custom.config ]]; then
+		echo "Configuring ${kernel_version}" 1>&2
 		make KCONFIG_CONFIG=custom.config defconfig 1>&2
-		cat "${script_dir}/config" >> custom.config 1>&2
-		make allnoconfig KCONFIG_ALLCONFIG="custom.config" 1>&2
+		tee -a < "${script_dir}/config" custom.config 1>&2
+		make allnoconfig KCONFIG_ALLCONFIG=custom.config 1>&2
 		virtme-configkernel --update 1>&2
 	fi
 
