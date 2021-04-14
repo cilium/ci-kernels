@@ -68,7 +68,7 @@ for kernel_version in "${kernel_versions[@]}"; do
 
 	export LLC="$llc"
 
-	make -C tools/testing/selftests/bpf
+	make -C tools/testing/selftests/bpf -j7
 	while IFS= read -r obj; do
 		if readelf -h "$obj" | grep -q "Linux BPF"; then
 			if [ "${series}" = "4.19" ]; then
