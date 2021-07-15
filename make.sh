@@ -7,37 +7,39 @@ readonly clang="${CLANG:-clang-12}"
 readonly llc="${LLC:=llc-12}"
 readonly script_dir="$(cd "$(dirname "$0")"; pwd)"
 readonly build_dir="${script_dir}/build"
+readonly empty_lsmod="$(mktemp)"
 
 mkdir -p "${build_dir}"
 
 fetch_and_configure() {
 	local kernel_version="$1"
-	local src_dir="${build_dir}/linux-${kernel_version}"
+	local src_dir="$2"
 	local archive="${build_dir}/linux-${kernel_version}.tar.xz"
 
-	test -e "${archive}" || curl --fail -L "https://cdn.kernel.org/pub/linux/kernel/v${kernel_version%%.*}.x/linux-${kernel_version}.tar.xz" -o "${archive}" 1>&2
-	test -d "${src_dir}" || tar --xz -xf "${archive}" -C "${build_dir}" 1>&2
+	test -e "${archive}" || curl --fail -L "https://cdn.kernel.org/pub/linux/kernel/v${kernel_version%%.*}.x/linux-${kernel_version}.tar.xz" -o "${archive}"
+	test -d "${src_dir}" || tar --xz -xf "${archive}" -C "${build_dir}"
 
 	cd "${src_dir}"
 	if [[ ! -f custom.config || "${script_dir}/config" -nt custom.config ]]; then
-		echo "Configuring ${kernel_version}" 1>&2
-		make KCONFIG_CONFIG=custom.config defconfig 1>&2
-		tee -a < "${script_dir}/config" custom.config 1>&2
-		make allnoconfig KCONFIG_ALLCONFIG=custom.config 1>&2
-		virtme-configkernel --update 1>&2
+		echo "Configuring ${kernel_version}"
+		make KCONFIG_CONFIG=custom.config defconfig
+		tee -a < "${script_dir}/config" custom.config
+		make allnoconfig KCONFIG_ALLCONFIG=custom.config
+		virtme-configkernel --update
+		make localmodconfig LSMOD="${empty_lsmod}"
 	fi
-
-	echo "${src_dir}"
 }
 
 readonly kernel_versions=("4.9.266" "4.14.230" "4.19.187" "5.4.112" "5.10.30")
 for kernel_version in "${kernel_versions[@]}"; do
 	series="$(echo "$kernel_version" | cut -d . -f 1-2)"
+	src_dir="${build_dir}/linux-${kernel_version}"
 
 	if [[ -f "linux-${kernel_version}.bz" ]]; then
 		echo "Skipping ${kernel_version}, it already exist"
 	else
-		cd "$(fetch_and_configure "$kernel_version")"
+		fetch_and_configure "$kernel_version" "$src_dir"
+		cd "$src_dir"
 		make clean
 		make -j7 bzImage
 
@@ -57,7 +59,9 @@ for kernel_version in "${kernel_versions[@]}"; do
 		continue
 	fi
 
-	cd "$(fetch_and_configure "$kernel_version")"
+	fetch_and_configure "$kernel_version" "$src_dir"
+	cd "$src_dir"
+	make -j7 modules
 
 	if [ "${series}" = "4.14" ]; then
 		inc="$(find /usr/include -iregex '.+/asm/bitsperlong\.h$' | head -n 1)"
@@ -68,6 +72,7 @@ for kernel_version in "${kernel_versions[@]}"; do
 
 	export LLC="$llc"
 
+	make -C tools/testing/selftests/bpf clean
 	make -C tools/testing/selftests/bpf -j7
 	while IFS= read -r obj; do
 		if readelf -h "$obj" | grep -q "Linux BPF"; then
