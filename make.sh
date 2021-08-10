@@ -30,7 +30,7 @@ fetch_and_configure() {
 	fi
 }
 
-readonly kernel_versions=("4.9.266" "4.14.230" "4.19.187" "5.4.112" "5.10.30")
+readonly kernel_versions=("4.9.279" "4.14.243" "4.19.202" "5.4.139" "5.10.35")
 for kernel_version in "${kernel_versions[@]}"; do
 	series="$(echo "$kernel_version" | cut -d . -f 1-2)"
 	src_dir="${build_dir}/linux-${kernel_version}"
