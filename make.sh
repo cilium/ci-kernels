@@ -21,6 +21,9 @@ fetch_and_configure() {
 
 	cd "${src_dir}"
 	if [[ ! -f custom.config || "${script_dir}/config" -nt custom.config ]]; then
+		if ! grep -q -- '-z max-page-size=0x200000' arch/x86/Makefile ; then
+			patch -p1 < ../../x86_64-align-2MB.patch
+		fi
 		echo "Configuring ${kernel_version}"
 		make KCONFIG_CONFIG=custom.config defconfig
 		tee -a < "${script_dir}/config" custom.config
