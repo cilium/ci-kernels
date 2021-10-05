@@ -24,6 +24,9 @@ fetch_and_configure() {
 		if ! grep -q -- '-z max-page-size=0x200000' arch/x86/Makefile ; then
 			patch -p1 < ../../x86_64-align-2MB.patch
 		fi
+		if ! grep -q -- '-fno-PIE' Makefile ; then
+			patch -p1 < ../../build-no-PIE.patch
+		fi
 		echo "Configuring ${kernel_version}"
 		make KCONFIG_CONFIG=custom.config defconfig
 		tee -a < "${script_dir}/config" custom.config
