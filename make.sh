@@ -36,7 +36,7 @@ fetch_and_configure() {
 	fi
 }
 
-readonly kernel_versions=("4.9.279" "4.14.243" "4.19.202" "5.4.139" "5.10.35")
+readonly kernel_versions=("4.4" "4.4.288" "4.9.279" "4.14.243" "4.19.202" "5.4.139" "5.10.35")
 for kernel_version in "${kernel_versions[@]}"; do
 	series="$(echo "$kernel_version" | cut -d . -f 1-2)"
 	src_dir="${build_dir}/linux-${kernel_version}"
@@ -50,7 +50,7 @@ for kernel_version in "${kernel_versions[@]}"; do
 		make -j7 bzImage
 
 		cp "arch/x86/boot/bzImage" "${script_dir}/linux-${kernel_version}.bz"
-		if [ "$kernel_version" != "$series" ]; then
+		if [ "$kernel_version" != "$series" && "$series" != "4.4" ]; then
 			cp -f "${script_dir}/linux-${kernel_version}.bz" "${script_dir}/linux-${series}.bz"
 		fi
 	fi
@@ -60,8 +60,8 @@ for kernel_version in "${kernel_versions[@]}"; do
 		continue
 	fi
 
-	if [[ "${series}" = "4.9" ]]; then
-		echo "No selftests on 4.9"
+	if [[ "${series}" = "4.4" || "${series}" = "4.9" ]]; then
+		echo "No selftests on <= 4.9"
 		continue
 	fi
 
