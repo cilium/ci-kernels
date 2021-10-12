@@ -36,7 +36,11 @@ fetch_and_configure() {
 	fi
 }
 
-readonly kernel_versions=("4.4" "4.4.288" "4.9.279" "4.14.243" "4.19.202" "5.4.139" "5.10.35")
+# Let's keep only useful kernel :
+#   * First kernel supported 4.4.0
+#   * Linus LTS kernel : "4.4.288" "4.9.286" "4.14.250" "4.19.210" "5.4.152" "5.10.72"
+#   * Latest stable kernel serie 5.14.11, shall be updated time to time for each series
+readonly kernel_versions=("4.4" "4.4.288" "4.9.286" "4.14.250" "4.19.210" "5.4.152" "5.10.72" "5.14.11")
 for kernel_version in "${kernel_versions[@]}"; do
 	series="$(echo "$kernel_version" | cut -d . -f 1-2)"
 	src_dir="${build_dir}/linux-${kernel_version}"
@@ -72,10 +76,13 @@ for kernel_version in "${kernel_versions[@]}"; do
 	if [ "${series}" = "4.14" ]; then
 		inc="$(find /usr/include -iregex '.+/asm/bitsperlong\.h$' | head -n 1)"
 		export CLANG="$clang '-I${inc%asm/bitsperlong.h}'"
+	elif [ "${kernel_version}" = "5.10.72" ]; then
+		sed -i -e 's|.*ASSERT_FALSE(.*|if (test_case->fails) { CHECK(false, "obj_load_fail", "should fail to load prog %s\\n", probe_name);goto cleanup; }\nif(0)|g' tools/testing/selftests/bpf/prog_tests/core_reloc.c
 	else
 		export CLANG="$clang"
 	fi
 
+	export CLANG="$CLANG -fno-stack-protector"
 	export LLC="$llc"
 
 	make -C tools/testing/selftests/bpf clean
