@@ -3,8 +3,7 @@
 set -eu
 set -o pipefail
 
-readonly clang="${CLANG:-clang-12}"
-readonly llc="${LLC:=llc-12}"
+readonly clang="${CLANG:-clang-13}"
 readonly script_dir="$(cd "$(dirname "$0")"; pwd)"
 readonly build_dir="${script_dir}/build"
 readonly empty_lsmod="$(mktemp)"
@@ -70,7 +69,7 @@ for kernel_version in "${kernel_versions[@]}"; do
 		export CLANG="$clang"
 	fi
 
-	export LLC="$llc"
+	export LLC="llc${clang#clang}"
 
 	make -C tools/testing/selftests/bpf clean
 	make -C tools/testing/selftests/bpf -j7
