@@ -7,6 +7,7 @@ readonly clang="${CLANG:-clang-13}"
 readonly script_dir="$(cd "$(dirname "$0")"; pwd)"
 readonly build_dir="${script_dir}/build"
 readonly empty_lsmod="$(mktemp)"
+readonly n="${NPROC:-$(nproc)}"
 
 mkdir -p "${build_dir}"
 
@@ -40,7 +41,7 @@ for kernel_version in "${kernel_versions[@]}"; do
 		fetch_and_configure "$kernel_version" "$src_dir"
 		cd "$src_dir"
 		make clean
-		make -j7 bzImage
+		taskset -c "0-$(($n - 1))" make -j"$n" bzImage
 
 		cp "arch/x86/boot/bzImage" "${script_dir}/linux-${kernel_version}.bz"
 		if [ "$kernel_version" != "$series" ]; then
@@ -60,7 +61,7 @@ for kernel_version in "${kernel_versions[@]}"; do
 
 	fetch_and_configure "$kernel_version" "$src_dir"
 	cd "$src_dir"
-	make -j7 modules
+	taskset -c "0-$(($n - 1))" make -j"$n" modules
 
 	if [ "${series}" = "4.14" ]; then
 		inc="$(find /usr/include -iregex '.+/asm/bitsperlong\.h$' | head -n 1)"
@@ -72,7 +73,7 @@ for kernel_version in "${kernel_versions[@]}"; do
 	export LLC="llc${clang#clang}"
 
 	make -C tools/testing/selftests/bpf clean
-	make -C tools/testing/selftests/bpf -j7
+	taskset -c "0-$(($n - 1))" make -C tools/testing/selftests/bpf -j"$n"
 	while IFS= read -r obj; do
 		if ! readelf -h "$obj" | grep -q "Linux BPF"; then
 			continue
