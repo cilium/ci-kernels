@@ -29,7 +29,7 @@ fetch_and_configure() {
 	fi
 }
 
-readonly kernel_versions=("4.4.131" "4.9.279" "4.14.243" "4.19.202" "5.4.139" "5.10.35")
+readonly kernel_versions=("4.4.131" "4.9.279" "4.14.243" "4.19.202" "5.4.139" "5.10.35" "5.14.14")
 for kernel_version in "${kernel_versions[@]}"; do
 	series="$(echo "$kernel_version" | cut -d . -f 1-2)"
 	src_dir="${build_dir}/linux-${kernel_version}"
@@ -74,14 +74,28 @@ for kernel_version in "${kernel_versions[@]}"; do
 	make -C tools/testing/selftests/bpf clean
 	make -C tools/testing/selftests/bpf -j7
 	while IFS= read -r obj; do
-		if readelf -h "$obj" | grep -q "Linux BPF"; then
-			if [ "${series}" = "4.19" ]; then
-				# Remove .BTF.ext, since .BTF is rewritten by pahole.
-				# See https://lore.kernel.org/bpf/CACAyw9-cinpz=U+8tjV-GMWuth71jrOYLQ05Q7_c34TCeMJxMg@mail.gmail.com/
-				llvm-objcopy --remove-section .BTF.ext "$obj" 1>&2
-			fi
-			echo "$obj"
+		if ! readelf -h "$obj" | grep -q "Linux BPF"; then
+			continue
 		fi
+
+		case "$(basename "$obj")" in
+		*.linked[12].o)
+			# Intermediate files produced during static linking.
+			continue
+			;;
+
+		linked_maps[12].o|linked_funcs[12].o|linked_vars[12].o)
+			# Inputs to static linking.
+			continue
+			;;
+		esac
+
+		if [ "${series}" = "4.19" ]; then
+			# Remove .BTF.ext, since .BTF is rewritten by pahole.
+			# See https://lore.kernel.org/bpf/CACAyw9-cinpz=U+8tjV-GMWuth71jrOYLQ05Q7_c34TCeMJxMg@mail.gmail.com/
+			llvm-objcopy --remove-section .BTF.ext "$obj" 1>&2
+		fi
+		echo "$obj"
 	done < <(find tools/testing/selftests/bpf -type f -name "*.o") | tar cvjf "${script_dir}/linux-${kernel_version}-selftests-bpf.bz" -T -
 	if [ "$kernel_version" != "$series" ]; then
 		cp -f "${script_dir}/linux-${kernel_version}-selftests-bpf.bz" "${script_dir}/linux-${series}-selftests-bpf.bz"
