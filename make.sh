@@ -30,7 +30,15 @@ fetch_and_configure() {
 	fi
 }
 
-readonly kernel_versions=("4.4.131" "4.9.279" "4.14.243" "4.19.202" "5.4.139" "5.10.35" "5.14.14")
+readonly kernel_versions=(
+	"4.4.131" # pinned, > .131 has a fixed map_get_next_key
+	"4.9.287"
+	"4.14.252"
+	"4.19.213"
+	"5.4.155"
+	"5.10.75"
+	"5.14.14"
+)
 for kernel_version in "${kernel_versions[@]}"; do
 	series="$(echo "$kernel_version" | cut -d . -f 1-2)"
 	src_dir="${build_dir}/linux-${kernel_version}"
