@@ -105,7 +105,7 @@ for kernel_version in "${kernel_versions[@]}"; do
 			llvm-objcopy --remove-section .BTF.ext "$obj" 1>&2
 		fi
 		echo "$obj"
-	done < <(find tools/testing/selftests/bpf -type f -name "*.o") | tar cvjf "${script_dir}/linux-${kernel_version}-selftests-bpf.bz" -T -
+	done < <(find tools/testing/selftests/bpf/. -name . -o -type d -prune -o -type f -name "*.o" -print) | tar cvjf "${script_dir}/linux-${kernel_version}-selftests-bpf.bz" -T -
 	if [ "$kernel_version" != "$series" ]; then
 		cp -f "${script_dir}/linux-${kernel_version}-selftests-bpf.bz" "${script_dir}/linux-${series}-selftests-bpf.bz"
 	fi
