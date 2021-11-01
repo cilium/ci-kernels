@@ -57,7 +57,7 @@ for kernel_version in "${kernel_versions[@]}"; do
 		fi
 	fi
 
-	if [[ -f "linux-${kernel_version}-selftests-bpf.bz" ]]; then
+	if [[ -f "linux-${kernel_version}-selftests-bpf.tgz" ]]; then
 		echo "Skipping selftests for ${kernel_version}, they already exist"
 		continue
 	fi
@@ -105,8 +105,8 @@ for kernel_version in "${kernel_versions[@]}"; do
 			llvm-objcopy --remove-section .BTF.ext "$obj" 1>&2
 		fi
 		echo "$obj"
-	done < <(find tools/testing/selftests/bpf/. -name . -o -type d -prune -o -type f -name "*.o" -print) | tar cvjf "${script_dir}/linux-${kernel_version}-selftests-bpf.bz" -T -
+	done < <(find tools/testing/selftests/bpf/. -name . -o -type d -prune -o -type f -name "*.o" -print) | GZIP=-9 tar cvzf "${script_dir}/linux-${kernel_version}-selftests-bpf.tgz" -T -
 	if [ "$kernel_version" != "$series" ]; then
-		cp -f "${script_dir}/linux-${kernel_version}-selftests-bpf.bz" "${script_dir}/linux-${series}-selftests-bpf.bz"
+		cp -f "${script_dir}/linux-${kernel_version}-selftests-bpf.tgz" "${script_dir}/linux-${series}-selftests-bpf.tgz"
 	fi
 done
