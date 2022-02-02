@@ -32,12 +32,12 @@ fetch_and_configure() {
 
 readonly kernel_versions=(
 	"4.4.131" # pinned, > .131 has a fixed map_get_next_key
-	"4.9.288"
-	"4.14.253"
-	"4.19.214"
-	"5.4.156"
-	"5.10.76"
-	"5.14.15"
+	"4.9.299"
+	"4.14.264"
+	"4.19.227"
+	"5.4.176"
+	"5.10.76" # pinned, selftests don't compile on newer kernels
+	"5.15.19"
 )
 for kernel_version in "${kernel_versions[@]}"; do
 	series="$(echo "$kernel_version" | cut -d . -f 1-2)"
