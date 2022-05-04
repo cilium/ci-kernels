@@ -38,6 +38,7 @@ readonly kernel_versions=(
 	"5.4.176"
 	"5.10.76" # pinned, selftests don't compile on newer kernels
 	"5.15.19"
+	"5.17.5" # latest
 )
 for kernel_version in "${kernel_versions[@]}"; do
 	series="$(echo "$kernel_version" | cut -d . -f 1-2)"
