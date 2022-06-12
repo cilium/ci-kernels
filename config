@@ -1,3 +1,5 @@
+# Kernel config common between arches
+
 # Enable BPF related things
 # Please sort lines by alphabet ascending.
 CONFIG_BPF_JIT=y
