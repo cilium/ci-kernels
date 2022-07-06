@@ -1,5 +1,7 @@
 FROM debian:bullseye
 
+LABEL org.opencontainers.image.source https://github.com/cilium/ci-kernels
+
 COPY bullseye-backports.list /etc/apt/sources.list.d
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
