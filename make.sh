@@ -11,7 +11,7 @@ readonly kernel_versions=(
 	"5.4.197"
 	"5.10.76" # pinned, selftests don't compile on newer kernels
 	"5.15.19"
-	"5.18.4" # latest
+	"5.18.10" # latest
 )
 
 readonly clang="${CLANG:-clang-14}"
