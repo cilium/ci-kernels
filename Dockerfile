@@ -15,7 +15,7 @@ COPY llvm-snapshot.gpg /usr/share/keyrings
 COPY llvm.list /etc/apt/sources.list.d
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
-	clang-14 llvm-14 \
+	clang-14 llvm-14 lld-14 \
 	&& rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install https://github.com/amluto/virtme/archive/refs/heads/master.zip
