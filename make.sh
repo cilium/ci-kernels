@@ -4,18 +4,16 @@ set -eu
 set -o pipefail
 
 readonly kernel_versions=(
-	# "4.4.131" # can't be build on modern toolchains
-	"4.9.317"
-	"4.14.282"
-	"4.19.246"
-	"5.4.197"
-	"5.10.76" # pinned, selftests don't compile on newer kernels
-	"5.15.19"
-	"5.18.10" # latest
+	"5.19.9" # latest
+	"5.15.68"
+	"5.10.143" # pinned, selftests don't compile on newer kernels
+	"5.4.213"
+	"4.19.258"
+	"4.14.293"
+	"4.9.328"
 )
 
-readonly clang="${CLANG:-clang-14}"
-readonly clang_suffix="${clang#clang}"
+readonly llvm_prefix="${LLVM_PREFIX:-/usr/lib/llvm-14}"
 readonly script_dir="$(cd "$(dirname "$0")"; pwd)"
 readonly build_dir="${script_dir}/build"
 readonly empty_lsmod="$(mktemp)"
@@ -59,6 +57,8 @@ parallel_make() {
 export KBUILD_BUILD_TIMESTAMP="$(date --date="@$(<"${script_dir}/VERSION")")"
 export KBUILD_BUILD_HOST="ci-kernels-builder"
 
+export PATH="${llvm_prefix}/bin:$PATH"
+
 for kernel_version in "${kernel_versions[@]}"; do
 	series="$(echo "$kernel_version" | cut -d . -f 1-2)"
 
@@ -90,15 +90,8 @@ for kernel_version in "${kernel_versions[@]}"; do
 
 	if [ "${series}" = "4.14" ]; then
 		inc="$(find /usr/include -iregex '.+/asm/bitsperlong\.h$' | head -n 1)"
-		export CLANG="$clang '-I${inc%asm/bitsperlong.h}'"
-	else
-		export CLANG="$clang"
+		export CLANG="clang '-I${inc%asm/bitsperlong.h}'"
 	fi
-
-	export LLC="llc${clang_suffix}"
-	export LLVM_OBJCOPY="llvm-objcopy${clang_suffix}"
-	export LLVM_READELF="llvm-readelf${clang_suffix}"
-	export LLVM_STRIP="llvm-strip${clang_suffix}"
 
 	make -C tools/testing/selftests/bpf clean
 	parallel_make -C tools/testing/selftests/bpf
@@ -123,14 +116,10 @@ for kernel_version in "${kernel_versions[@]}"; do
 		if [ "${series}" = "4.19" ]; then
 			# Remove .BTF.ext, since .BTF is rewritten by pahole.
 			# See https://lore.kernel.org/bpf/CACAyw9-cinpz=U+8tjV-GMWuth71jrOYLQ05Q7_c34TCeMJxMg@mail.gmail.com/
-			"${LLVM_OBJCOPY}" --remove-section .BTF.ext "$obj" 1>&2
+			llvm-objcopy --remove-section .BTF.ext "$obj" 1>&2
 		fi
 		echo "$obj"
-	done < <(find tools/testing/selftests/bpf/. -name . -o -type d -prune -o -type f -name "*.o" -print) | tar cvf "${script_dir}/linux-${kernel_version}-selftests-bpf.tar" -T -
-
-	if [[ -f "tools/testing/selftests/bpf/bpf_testmod/bpf_testmod.ko" ]]; then
-		tar rvf "${script_dir}/linux-${kernel_version}-selftests-bpf.tar" "tools/testing/selftests/bpf/bpf_testmod/bpf_testmod.ko"
-	fi
+	done < <(find tools/testing/selftests/bpf/. -name . -o -type d -prune -o -type f \( -name "*.o" -o -name "bpf_testmod.ko" \) -print) | tar cvf "${script_dir}/linux-${kernel_version}-selftests-bpf.tar" -T -
 
 	gzip -9 "${script_dir}/linux-${kernel_version}-selftests-bpf.tar"
 	mv "${script_dir}/linux-${kernel_version}-selftests-bpf.tar.gz" "${script_dir}/linux-${kernel_version}-selftests-bpf.tgz"
