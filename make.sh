@@ -119,7 +119,11 @@ for kernel_version in "${kernel_versions[@]}"; do
 			llvm-objcopy --remove-section .BTF.ext "$obj" 1>&2
 		fi
 		echo "$obj"
-	done < <(find tools/testing/selftests/bpf/. -name . -o -type d -prune -o -type f \( -name "*.o" -o -name "bpf_testmod.ko" \) -print) | tar cvf "${script_dir}/linux-${kernel_version}-selftests-bpf.tar" -T -
+	done < <(find tools/testing/selftests/bpf/. -name . -o -type d -prune -o -type f -name "*.o" -print) | tar cvf "${script_dir}/linux-${kernel_version}-selftests-bpf.tar" -T -
+
+	if [[ -f "tools/testing/selftests/bpf/bpf_testmod/bpf_testmod.ko" ]]; then
+		tar rvf "${script_dir}/linux-${kernel_version}-selftests-bpf.tar" "tools/testing/selftests/bpf/bpf_testmod/bpf_testmod.ko"
+	fi
 
 	gzip -9 "${script_dir}/linux-${kernel_version}-selftests-bpf.tar"
 	mv "${script_dir}/linux-${kernel_version}-selftests-bpf.tar.gz" "${script_dir}/linux-${kernel_version}-selftests-bpf.tgz"
