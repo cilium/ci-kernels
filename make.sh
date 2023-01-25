@@ -4,13 +4,13 @@ set -eu
 set -o pipefail
 
 readonly kernel_versions=(
-	"5.19.9" # latest
-	"5.15.68"
-	"5.10.143" # pinned, selftests don't compile on newer kernels
-	"5.4.213"
-	"4.19.258"
-	"4.14.293"
-	"4.9.328"
+	"5.19.16" # 5.19.17 has broken selftests
+	"5.15.75" # 5.15.90 has broken selftests
+	"5.10.150" # 5.10.165 has broken selftests
+	"5.4.220" # 5.4.230 has broken selftests
+	"4.19.271"
+	"4.14.304"
+	"4.9.337"
 )
 
 readonly llvm_prefix="${LLVM_PREFIX:-/usr/lib/llvm-14}"
