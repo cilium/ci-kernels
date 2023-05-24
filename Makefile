@@ -10,7 +10,7 @@ endif
 .PHONY: all image push
 
 all:
-	${CONTAINER_ENGINE} run -v .:/work "$(IMAGE):$(VERSION)"
+	${CONTAINER_ENGINE} run -it -v .:/work "$(IMAGE):$(VERSION)"
 
 image: EPOCH := $(shell date +'%s')
 image:
