@@ -4,12 +4,13 @@ set -eu
 set -o pipefail
 
 readonly kernel_versions=(
+	"6.1.29"
 	"5.19.16" # 5.19.17 has broken selftests
-	"5.15.75" # 5.15.90 has broken selftests
-	"5.10.150" # 5.10.165 has broken selftests
-	"5.4.220" # 5.4.230 has broken selftests
-	"4.19.271"
-	"4.14.304"
+	"5.15.112"
+	"5.10.150" # 5.10.180 has broken selftests
+	"5.4.243"
+	"4.19.283"
+	"4.14.315"
 	"4.9.337"
 )
 
