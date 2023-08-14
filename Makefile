@@ -1,18 +1,21 @@
+CONTAINER_ENGINE ?= podman
+
 IMAGE := $(file <IMAGE)
 VERSION := $(file <VERSION)
 
 ifndef IMAGE
 $(error IMAGE file not present in Makefile directory)
 endif
+
 .PHONY: all image push
 
 all:
-	./make.sh
+	${CONTAINER_ENGINE} run -it -v .:/work "$(IMAGE):$(VERSION)"
 
 image: EPOCH := $(shell date +'%s')
 image:
-	docker build --no-cache . -t "$(IMAGE):$(EPOCH)"
+	${CONTAINER_ENGINE} build --no-cache . -t "$(IMAGE):$(EPOCH)"
 	echo $(EPOCH) > VERSION
 
 push:
-	docker push "$(IMAGE):$(shell cat VERSION)"
+	${CONTAINER_ENGINE} push "$(IMAGE):$(shell cat VERSION)"
