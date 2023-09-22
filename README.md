@@ -1,6 +1,7 @@
 # ci-kernels
 
-A collection of kernels used for CI builds. You'll need [podman] to run the build.
+A collection of kernels used for CI builds. You'll need docker with buildx support
+to run the build.
 
 1. Update kernel versions in `make.sh`
 2. `make`
@@ -10,5 +11,3 @@ A collection of kernels used for CI builds. You'll need [podman] to run the buil
 
 1. `make image`
 2. `make push`
-
-[podman]: https://podman.io/

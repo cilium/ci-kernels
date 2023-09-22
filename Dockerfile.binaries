@@ -1,0 +1,64 @@
+ARG IMAGE
+ARG VERSION
+
+FROM --platform=$BUILDPLATFORM $IMAGE:$VERSION AS configure-vmlinux
+
+ARG KERNEL_VERSION
+
+# Download and cache kernel
+RUN --mount=type=cache,target=/tmp/kernel \
+    KERNEL_MAJ_VERSION=$(echo $KERNEL_VERSION | cut -d '.' -f 1); \
+    cd /tmp/kernel && \
+    curl --fail -L --time-cond linux-${KERNEL_VERSION}.tar.xz -o linux-${KERNEL_VERSION}.tar.xz https://www.kernel.org/pub/linux/kernel/v${KERNEL_MAJ_VERSION}.x/linux-${KERNEL_VERSION}.tar.xz && \
+    tar -xf linux-${KERNEL_VERSION}.tar.xz -C /usr/src
+
+WORKDIR /usr/src/linux-${KERNEL_VERSION}
+
+COPY configure-vmlinux.sh env.sh config .
+
+ARG KBUILD_BUILD_TIMESTAMP="Thu  6 Jul 01:00:00 UTC 2023"
+ARG KBUILD_BUILD_HOST="ci-kernels-builder"
+ARG TARGETPLATFORM
+
+RUN ./configure-vmlinux.sh
+
+FROM configure-vmlinux AS build-vmlinux
+
+COPY build-vmlinux.sh .
+
+RUN --mount=type=cache,target=/root/.ccache \
+    echo 'max_size = 5.0G' > /root/.ccache/ccache.conf; \
+    ./build-vmlinux.sh && \
+    ccache -s
+
+# Install compiled artifacts
+RUN mkdir -p /tmp/output/boot && \
+    find ./ -type f -name '*Image' -exec cp -v {} /tmp/output/boot/vmlinuz \; && \
+    if [ -d tools/testing/selftests/bpf/bpf_testmod ]; then \
+        make M=tools/testing/selftests/bpf/bpf_testmod INSTALL_MOD_PATH=/tmp/output modules_install; \
+    fi
+
+# Build selftests
+FROM build-vmlinux as build-selftests
+
+ARG BUILDPLATFORM
+
+RUN if [ "$BUILDPLATFORM" != "$TARGETPLATFORM" ]; then \
+        echo "Can't cross compile selftests"; exit 1; \
+    fi
+
+COPY build-selftests.sh .
+RUN ./build-selftests.sh
+
+COPY copy-selftests.sh .
+RUN mkdir /tmp/selftests && ./copy-selftests.sh /tmp/selftests
+
+# Prepare the final kernel image
+FROM scratch as vmlinux
+
+COPY --from=build-vmlinux /tmp/output /
+
+# Prepare the selftests image
+FROM scratch as selftests
+
+COPY --from=build-selftests /tmp/selftests /
