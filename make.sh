@@ -4,133 +4,71 @@ set -eu
 set -o pipefail
 
 readonly kernel_versions=(
-	"6.1.29"
-	"5.19.16" # 5.19.17 has broken selftests
-	"5.15.112"
-	"5.10.150" # 5.10.180 has broken selftests
-	"5.4.243"
-	"4.19.283"
-	"4.14.315"
+	# 6.1.39 to 6.1.44: 34fe7aa8ef1d ("libbpf: fix offsetof() and container_of() to work with CO-RE")
+	"6.1.38"
+	# 5.15.121 to 5.15.125: 71754ee427d7 ("libbpf: fix offsetof() and container_of() to work with CO-RE")
+	"5.15.120"
+	# 5.10.157 to 50.10.187: f4b8c0710ab6 ("selftests/bpf: Add verifier test for release_reference()")
+	# 5.10.188 to 5.10.189: ef7fe1b5c4fb ("libbpf: fix offsetof() and container_of() to work with CO-RE")
+	"5.10.156"
+	"5.4.252"
+	"4.19.290"
+	"4.14.321"
 	"4.9.337"
 )
 
-readonly llvm_prefix="${LLVM_PREFIX:-/usr/lib/llvm-14}"
-readonly script_dir="$(cd "$(dirname "$0")"; pwd)"
-readonly build_dir="${script_dir}/build"
-readonly empty_lsmod="$(mktemp)"
-readonly n="${NPROC:-$(nproc)}"
+# release_reference() is fixed by 4237e9f4a962 ("selftests/bpf: Add verifier test for PTR_TO_MEM spill")
+# offsetof() is fixed by 416c6d01244e ("selftests/bpf: fix static assert compilation issue for test_cls_*.c")
 
-mkdir -p "${build_dir}"
+image="$(<IMAGE)"
+version="$(<VERSION)"
+readonly image version
 
-fetch_and_configure() {
-	local kernel_version="$1"
-	local archive="${build_dir}/linux-${kernel_version}.tar.xz"
-	local src_dir="${build_dir}/${kernel_version}"
-
-	test -e "${archive}" || curl --fail -L "https://cdn.kernel.org/pub/linux/kernel/v${kernel_version%%.*}.x/linux-${kernel_version}.tar.xz" -o "${archive}"
-	if [[ ! -d "${src_dir}" ]]; then
-		mkdir "${src_dir}"
-		tar --xz -xf "${archive}" -C "${src_dir}" --strip-components=1
-	fi
-
-	pushd "${src_dir}"
-	if [[ ! -f custom.config || "${script_dir}/config" -nt custom.config ]]; then
-		echo "Configuring ${kernel_version}"
-		make KCONFIG_CONFIG=custom.config defconfig
-		tee -a < "${script_dir}/config" custom.config
-		make allnoconfig KCONFIG_ALLCONFIG=custom.config
-		virtme-configkernel --update
-		make localmodconfig LSMOD="${empty_lsmod}"
-	fi
+verbose() {
+	echo "$@"
+	"$@"
 }
 
-fetch_configure_and_clean() {
-	fetch_and_configure "$@"
-	make clean
-	# remove incrementing version numbers on recompilation.
-	rm -f .version
+# buildx VERSION ARCH TARGET OUTPUT
+buildx() {
+	test -e "${4}" && rm -r "${4}"
+	verbose docker buildx build -f Dockerfile.binaries --build-arg IMAGE="${image}" --build-arg VERSION="${version}" --build-arg KERNEL_VERSION="${1}" --platform "linux/${2}" --target="${3}" --output="${4}" .
 }
-
-parallel_make() {
-	taskset -c "0-$(($n - 1))" make -j"$n" "$@"
-}
-
-export KBUILD_BUILD_TIMESTAMP="$(date --date="@$(<"${script_dir}/VERSION")")"
-export KBUILD_BUILD_HOST="ci-kernels-builder"
-
-export PATH="${llvm_prefix}/bin:$PATH"
 
 for kernel_version in "${kernel_versions[@]}"; do
 	series="$(echo "$kernel_version" | cut -d . -f 1-2)"
 
-	if [[ -f "${script_dir}/linux-${kernel_version}.bz" ]]; then
-		echo "Skipping linux-${kernel_version}.bz, it already exist"
-	else
-		fetch_configure_and_clean "$kernel_version"
-		parallel_make bzImage
-		cp "arch/x86/boot/bzImage" "${script_dir}/linux-${kernel_version}.bz"
-		popd
+	for arch in amd64 arm64; do
+		output="linux-${kernel_version}-${arch}.tgz"
+		if [[ -f "${output}" ]]; then
+			echo "Skipping ${output}, it already exists"
+		else
+			buildx "${kernel_version}" ${arch} vmlinux "build/${kernel_version}"
+			tar -cvf "${output}" -C "build/${kernel_version}" .
+			rm -r "build/${kernel_version}"
 
-		if [ "$kernel_version" != "$series" ]; then
-			cp -f "${script_dir}/linux-${kernel_version}.bz" "${script_dir}/linux-${series}.bz"
+			if [ "${kernel_version}" != "${series}" ]; then
+				cp -f "${output}" "linux-${series}-${arch}.tgz"
+			fi
 		fi
-	fi
-
-	if [[ -f "${script_dir}/linux-${kernel_version}-selftests-bpf.tgz" ]]; then
-		echo "Skipping selftests for ${kernel_version}, they already exist"
-		continue
-	fi
+	done
 
 	if [[ "${series}" = "4.4" || "${series}" = "4.9" ]]; then
 		echo "No selftests on <= 4.9"
 		continue
 	fi
 
-	fetch_and_configure "$kernel_version"
-	parallel_make modules
 
-	if [ "${series}" = "4.14" ]; then
-		inc="$(find /usr/include -iregex '.+/asm/bitsperlong\.h$' | head -n 1)"
-		export CLANG="clang '-I${inc%asm/bitsperlong.h}'"
-	fi
+	output="linux-${kernel_version}-amd64-selftests-bpf.tgz"
+	if [[ -f "${output}" ]]; then
+		echo "Skipping ${output}, it already exists"
+	else
+		buildx "${kernel_version}" amd64 selftests "build/${kernel_version}"
+		tar -cvf "${output}" --use-compress-program="gzip -9" -C "build/${kernel_version}" .
+		rm -r "build/${kernel_version}"
 
-	make -C tools/testing/selftests/bpf clean
-	parallel_make -C tools/testing/selftests/bpf
-
-	while IFS= read -r obj; do
-		if ! readelf -h "$obj" | grep -q "Linux BPF"; then
-			continue
+		if [ "${kernel_version}" != "${series}" ]; then
+			cp -f "${output}" "linux-${series}-amd64-selftests-bpf.tgz"
 		fi
-
-		case "$(basename "$obj")" in
-		*.linked[12].o)
-			# Intermediate files produced during static linking.
-			continue
-			;;
-
-		linked_maps[12].o|linked_funcs[12].o|linked_vars[12].o)
-			# Inputs to static linking.
-			continue
-			;;
-		esac
-
-		if [ "${series}" = "4.19" ]; then
-			# Remove .BTF.ext, since .BTF is rewritten by pahole.
-			# See https://lore.kernel.org/bpf/CACAyw9-cinpz=U+8tjV-GMWuth71jrOYLQ05Q7_c34TCeMJxMg@mail.gmail.com/
-			llvm-objcopy --remove-section .BTF.ext "$obj" 1>&2
-		fi
-		echo "$obj"
-	done < <(find tools/testing/selftests/bpf/. -name . -o -type d -prune -o -type f -name "*.o" -print) | tar cvf "${script_dir}/linux-${kernel_version}-selftests-bpf.tar" -T -
-
-	if [[ -f "tools/testing/selftests/bpf/bpf_testmod/bpf_testmod.ko" ]]; then
-		tar rvf "${script_dir}/linux-${kernel_version}-selftests-bpf.tar" "tools/testing/selftests/bpf/bpf_testmod/bpf_testmod.ko"
-	fi
-
-	gzip -9 "${script_dir}/linux-${kernel_version}-selftests-bpf.tar"
-	mv "${script_dir}/linux-${kernel_version}-selftests-bpf.tar.gz" "${script_dir}/linux-${kernel_version}-selftests-bpf.tgz"
-	popd
-
-	if [ "$kernel_version" != "$series" ]; then
-		cp -f "${script_dir}/linux-${kernel_version}-selftests-bpf.tgz" "${script_dir}/linux-${series}-selftests-bpf.tgz"
 	fi
 done
