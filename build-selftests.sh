@@ -17,4 +17,5 @@ if [ "${series}" = "4.14" ]; then
 	export CLANG="clang '-I${inc%asm/bitsperlong.h}'"
 fi
 
+make headers
 make -C tools/testing/selftests/bpf

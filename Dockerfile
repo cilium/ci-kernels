@@ -1,15 +1,31 @@
-FROM debian:latest
+FROM debian:bookworm
+
+LABEL org.opencontainers.image.source https://github.com/cilium/ci-kernels
 
 # Preserve the APT cache between runs
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates
+
+COPY llvm-snapshot.gpg /usr/share/keyrings
+COPY llvm.list /etc/apt/sources.list.d
+COPY llvm.pref /etc/apt/preferences.d
+
+# Bake the appropriate clang version into the container
+ARG CLANG_VERSION=16
+ENV CLANG=clang-${CLANG_VERSION}
+ENV LLVM_STRIP=llvm-strip-${CLANG_VERSION}
+
 # Update and install dependencies
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-  --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
-        ca-certificates \
         tar \
         build-essential \
         crossbuild-essential-amd64 \
@@ -26,8 +42,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         python3-pip \
         pahole \
         libcap-dev \
-        clang \
-        llvm \
+        ${CLANG} \
+        llvm-${CLANG_VERSION} \
         lld \
         kmod \
         rsync \
