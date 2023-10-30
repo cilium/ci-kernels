@@ -4,7 +4,7 @@ set -eu
 set -o pipefail
 
 readonly kernel_versions=(
-	"6.6-rc3"
+	"6.6"
 	"6.1.55"
 	"5.15.132"
 	"5.10.197"
