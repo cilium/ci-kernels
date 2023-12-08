@@ -97,7 +97,6 @@ jobs:
         target: vmlinux
         platforms: |
           linux/amd64
-          ${{ matrix.kernel_version == env.latest_stable && 'linux/arm64' || '' }}
         build-args: |
           KERNEL_VERSION=${{ matrix.kernel_version }}
         tags: ${{ steps.meta.outputs.tags }}
