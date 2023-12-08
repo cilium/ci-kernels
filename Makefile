@@ -11,7 +11,7 @@ all:
 
 image: EPOCH := $(shell date +'%s')
 image:
-	docker build --no-cache . -t "$(IMAGE):$(EPOCH)"
+	docker build --no-cache -f Dockerfile.builder . -t "$(IMAGE):$(EPOCH)"
 	echo $(EPOCH) > VERSION
 
 push:
