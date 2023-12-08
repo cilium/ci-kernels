@@ -1,17 +1,12 @@
-IMAGE := $(file <IMAGE)
+IMAGE := ghcr.io/cilium/ci-kernels-builder
 VERSION := $(file <VERSION)
 
-ifndef IMAGE
-$(error IMAGE file not present in Makefile directory)
-endif
-.PHONY: all image push
-
-all:
-	./make.sh
+.PHONY: image push
 
 image: EPOCH := $(shell date +'%s')
 image:
 	docker build --no-cache -f Dockerfile.builder . -t "$(IMAGE):$(EPOCH)"
+	sed 's|$(IMAGE):[0-9]\+|$(IMAGE):$(EPOCH)|' -i Dockerfile
 	echo $(EPOCH) > VERSION
 
 push:
