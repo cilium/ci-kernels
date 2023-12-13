@@ -54,6 +54,6 @@ FROM scratch as vmlinux
 COPY --from=build-vmlinux /tmp/output /
 
 # Prepare the selftests image
-FROM scratch as selftests-bpf
+FROM vmlinux as selftests-bpf
 
-COPY --from=build-selftests /tmp/selftests /
+COPY --from=build-selftests /tmp/selftests /usr/src/linux
