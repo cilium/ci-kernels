@@ -107,7 +107,7 @@ jobs:
       if: matrix.kernel_version == env.latest_stable
       uses: docker/build-push-action@v5
       with:
-        target: vmlinux
+        target: selftests-bpf
         platforms: |
           linux/amd64
         build-args: |
