@@ -1,3 +1,0 @@
-*.bz filter=lfs diff=lfs merge=lfs -text
-*.tgz filter=lfs diff=lfs merge=lfs -text
-linux-* filter=lfs diff=lfs merge=lfs -text
