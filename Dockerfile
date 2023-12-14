@@ -51,9 +51,13 @@ RUN mkdir /tmp/selftests && ./copy-selftests.sh /tmp/selftests
 # Prepare the final kernel image
 FROM scratch as vmlinux
 
+LABEL org.opencontainers.image.licenses=GPL-2.0-only
+
 COPY --from=build-vmlinux /tmp/output /
 
 # Prepare the selftests image
 FROM vmlinux as selftests-bpf
+
+LABEL org.opencontainers.image.licenses=GPL-2.0-only
 
 COPY --from=build-selftests /tmp/selftests /usr/src/linux
