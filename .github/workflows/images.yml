@@ -75,6 +75,9 @@ jobs:
         tags: |
           type=raw,value=${{ matrix.kernel_version }}
           type=match,pattern=^\d+\.\d+,group=0,value=${{ matrix.kernel_version }}
+        labels: |
+          org.opencontainers.image.created=
+          org.opencontainers.image.revision=
 
     - name: Selftests metadata
       id: selftests-meta
@@ -85,6 +88,9 @@ jobs:
         tags: |
           type=raw,value=${{ matrix.kernel_version }},suffix=-selftests
           type=match,pattern=^\d+\.\d+,group=0,value=${{ matrix.kernel_version }},suffix=-selftests
+        labels: |
+          org.opencontainers.image.created=
+          org.opencontainers.image.revision=
 
     - name: Log in to GitHub Container Registry
       if: github.ref == 'refs/heads/main'
@@ -98,6 +104,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         target: vmlinux
+        provenance: false
         platforms: |
           linux/amd64
           ${{ matrix.kernel_version == env.LATEST_VERSION && 'linux/arm64' || '' }}
@@ -105,6 +112,7 @@ jobs:
           KERNEL_VERSION=${{ matrix.kernel_version }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        annotations: ${{ steps.meta.outputs.annotations }}
         push: ${{ github.ref == 'refs/heads/main' }}
 
     - name: Build selftests
@@ -112,12 +120,14 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         target: selftests-bpf
+        provenance: false
         platforms: |
           linux/amd64
         build-args: |
           KERNEL_VERSION=${{ matrix.kernel_version }}
         tags: ${{ steps.selftests-meta.outputs.tags }}
         labels: ${{ steps.selftests-meta.outputs.labels }}
+        annotations: ${{ steps.selftests-meta.outputs.annotations }}
         push: ${{ github.ref == 'refs/heads/main' }}
 
   results:
