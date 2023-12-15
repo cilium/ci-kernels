@@ -44,7 +44,8 @@ jobs:
       matrix:
         kernel_version: ${{ fromJSON(needs.read-config.outputs.kernel).versions }}
     env:
-      latest_stable: ${{ fromJSON(needs.read-config.outputs.kernel).latest_stable }}
+      LATEST_STABLE: ${{ fromJSON(needs.read-config.outputs.kernel).latest_stable }}
+      LATEST_VERSION: ${{ fromJSON(needs.read-config.outputs.kernel).versions[0] }}
 
     steps:
     - name: Checkout
@@ -57,7 +58,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ccache
-        key: ccache-${{ matrix.kernel_version }}-amd64-${{ hashFiles('config') }}
+        key: ccache-${{ matrix.kernel_version }}-${{ hashFiles('config') }}
 
     - name: Inject ccache into builder
       uses: reproducible-containers/buildkit-cache-dance@v2.1.3
@@ -99,6 +100,7 @@ jobs:
         target: vmlinux
         platforms: |
           linux/amd64
+          ${{ matrix.kernel_version == env.LATEST_VERSION && 'linux/arm64' || '' }}
         build-args: |
           KERNEL_VERSION=${{ matrix.kernel_version }}
         tags: ${{ steps.meta.outputs.tags }}
@@ -106,7 +108,7 @@ jobs:
         push: ${{ github.ref == 'refs/heads/main' }}
 
     - name: Build selftests
-      if: matrix.kernel_version == env.latest_stable
+      if: matrix.kernel_version == env.LATEST_STABLE
       uses: docker/build-push-action@v5
       with:
         target: selftests-bpf
@@ -118,47 +120,12 @@ jobs:
         labels: ${{ steps.selftests-meta.outputs.labels }}
         push: ${{ github.ref == 'refs/heads/main' }}
 
-  build-arm64:
-    name: Build arm64
-    runs-on: ubuntu-latest
-    needs: read-config
-    env:
-      latest_version: ${{ fromJSON(needs.read-config.outputs.kernel).versions[0] }}
-
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Cache ccache output
-      uses: actions/cache@v3
-      with:
-        path: ccache
-        key: ccache-${{ env.latest_version }}-arm64-${{ hashFiles('config') }}
-
-    - name: Inject ccache into builder
-      uses: reproducible-containers/buildkit-cache-dance@v2.1.3
-      with:
-        cache-source: ccache
-        cache-target: /root/.ccache
-
-    - name: Build
-      uses: docker/build-push-action@v5
-      with:
-        target: vmlinux
-        platforms: linux/arm64
-        build-args: |
-          KERNEL_VERSION=${{ env.latest_version }}
-
   results:
     if: ${{ always() }}
     runs-on: ubuntu-latest
     name: Final Results
     needs:
     - build-and-push
-    - build-arm64
     steps:
     - run: exit 1
       if: >-
