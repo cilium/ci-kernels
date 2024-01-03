@@ -2,10 +2,16 @@
 
 if [ "$TARGETPLATFORM" = "linux/amd64" ]; then
 	ARCH=x86_64
-	CROSS_COMPILE="ccache x86_64-linux-gnu-"
+	CROSS_COMPILE="x86_64-linux-gnu-"
 elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then
-	ARCH=arm64 CROSS_COMPILE="ccache aarch64-linux-gnu-"
+	ARCH=arm64
+	CROSS_COMPILE="aarch64-linux-gnu-"
 else
 	echo "Unsupported target platform"; exit 1;
 fi
+
+if command -v ccache > /dev/null; then
+	CROSS_COMPILE="ccache $CROSS_COMPILE"
+fi
+
 export ARCH CROSS_COMPILE
