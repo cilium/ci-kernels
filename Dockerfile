@@ -9,7 +9,7 @@ RUN --mount=type=cache,target=/tmp/kernel ./download.sh
 
 WORKDIR /usr/src/linux-${KERNEL_VERSION}
 
-COPY configure-vmlinux.sh env.sh config .
+COPY configure-vmlinux.sh env.sh config config-arm64 config-x86_64 .
 
 ARG KBUILD_BUILD_TIMESTAMP="Thu  6 Jul 01:00:00 UTC 2023"
 ARG KBUILD_BUILD_HOST="ci-kernels-builder"
