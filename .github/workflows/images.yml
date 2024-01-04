@@ -113,7 +113,7 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         annotations: ${{ steps.meta.outputs.annotations }}
-        push: ${{ github.ref == 'refs/heads/main' }}
+        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/vmlinux' }}
 
     - name: Build selftests
       if: matrix.kernel_version == env.LATEST_STABLE
@@ -128,7 +128,16 @@ jobs:
         tags: ${{ steps.selftests-meta.outputs.tags }}
         labels: ${{ steps.selftests-meta.outputs.labels }}
         annotations: ${{ steps.selftests-meta.outputs.annotations }}
-        push: ${{ github.ref == 'refs/heads/main' }}
+        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/selftests-bpf' }}
+
+    - name: Store artifacts
+      if: github.ref != 'refs/heads/main'
+      uses: actions/upload-artifact@v3
+      with:
+        name: Artifacts (${{ matrix.kernel_version }})
+        if-no-files-found: error
+        path: '/tmp/build/'
+        retention-days: 1
 
   results:
     if: ${{ always() }}
