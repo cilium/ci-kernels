@@ -1,5 +1,6 @@
 {
-	"latest_stable": "6.6.10",
+	"mainline": "6.7",
+	"stable": "6.6.10",
 	"versions": [
 		"6.7",
 		"6.6.10",
