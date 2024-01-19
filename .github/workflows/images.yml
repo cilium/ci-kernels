@@ -80,6 +80,9 @@ jobs:
         labels: |
           org.opencontainers.image.created=
           org.opencontainers.image.revision=
+        annotations: |
+          org.opencontainers.image.created=
+          org.opencontainers.image.revision=
 
     - name: Selftests metadata
       id: selftests-meta
@@ -93,6 +96,9 @@ jobs:
           type=raw,value=mainline,suffix=-selftests,enable=${{ matrix.kernel_version == env.MAINLINE }}
           type=raw,value=stable,suffix=-selftests,enable=${{ matrix.kernel_version == env.STABLE }}
         labels: |
+          org.opencontainers.image.created=
+          org.opencontainers.image.revision=
+        annotations: |
           org.opencontainers.image.created=
           org.opencontainers.image.revision=
 
