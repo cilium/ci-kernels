@@ -126,7 +126,7 @@ jobs:
         outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/vmlinux' }}
 
     - name: Build selftests
-      if: matrix.kernel_version == env.STABLE
+      if: matrix.kernel_version == env.MAINLINE || matrix.kernel_version == env.STABLE
       uses: docker/build-push-action@v5
       with:
         target: selftests-bpf
