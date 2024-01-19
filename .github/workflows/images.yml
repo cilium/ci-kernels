@@ -44,8 +44,8 @@ jobs:
       matrix:
         kernel_version: ${{ fromJSON(needs.read-config.outputs.kernel).versions }}
     env:
-      LATEST_STABLE: ${{ fromJSON(needs.read-config.outputs.kernel).latest_stable }}
-      LATEST_VERSION: ${{ fromJSON(needs.read-config.outputs.kernel).versions[0] }}
+      MAINLINE: ${{ fromJSON(needs.read-config.outputs.kernel).mainline }}
+      STABLE: ${{ fromJSON(needs.read-config.outputs.kernel).stable }}
 
     steps:
     - name: Checkout
@@ -75,6 +75,8 @@ jobs:
         tags: |
           type=raw,value=${{ matrix.kernel_version }}
           type=match,pattern=^\d+\.\d+,group=0,value=${{ matrix.kernel_version }}
+          type=raw,value=mainline,enable=${{ matrix.kernel_version == env.MAINLINE }}
+          type=raw,value=stable,enable=${{ matrix.kernel_version == env.STABLE }}
         labels: |
           org.opencontainers.image.created=
           org.opencontainers.image.revision=
@@ -88,6 +90,8 @@ jobs:
         tags: |
           type=raw,value=${{ matrix.kernel_version }},suffix=-selftests
           type=match,pattern=^\d+\.\d+,group=0,value=${{ matrix.kernel_version }},suffix=-selftests
+          type=raw,value=mainline,suffix=-selftests,enable=${{ matrix.kernel_version == env.MAINLINE }}
+          type=raw,value=stable,suffix=-selftests,enable=${{ matrix.kernel_version == env.STABLE }}
         labels: |
           org.opencontainers.image.created=
           org.opencontainers.image.revision=
@@ -107,7 +111,7 @@ jobs:
         provenance: false
         platforms: |
           linux/amd64
-          ${{ matrix.kernel_version == env.LATEST_VERSION && 'linux/arm64' || '' }}
+          ${{ (matrix.kernel_version == env.MAINLINE || matrix.kernel_version == env.STABLE) && 'linux/arm64' || '' }}
         build-args: |
           KERNEL_VERSION=${{ matrix.kernel_version }}
         tags: ${{ steps.meta.outputs.tags }}
@@ -116,7 +120,7 @@ jobs:
         outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/vmlinux' }}
 
     - name: Build selftests
-      if: matrix.kernel_version == env.LATEST_STABLE
+      if: matrix.kernel_version == env.STABLE
       uses: docker/build-push-action@v5
       with:
         target: selftests-bpf
