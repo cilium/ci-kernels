@@ -26,11 +26,15 @@ RUN --mount=type=cache,target=/root/.ccache \
     ./build-vmlinux.sh && \
     ccache -s
 
-# Install compiled artifacts
+# Install vmlinuz
 RUN mkdir -p /tmp/output/boot && \
-    find ./ -type f -name '*Image' -exec cp -v {} /tmp/output/boot/vmlinuz \; && \
-    if [ -d tools/testing/selftests/bpf/bpf_testmod ]; then \
-        make M=tools/testing/selftests/bpf/bpf_testmod INSTALL_MOD_PATH=/tmp/output modules_install; \
+    find ./ -type f -name '*Image' -exec cp -v {} /tmp/output/boot/vmlinuz \;
+
+# Install modules in /usr/lib/modules, with a symlink from /lib to
+# /usr/lib. This avoids breaking overlay in merged usr scenarios.
+RUN if [ -d tools/testing/selftests/bpf/bpf_testmod ]; then \
+        make M=tools/testing/selftests/bpf/bpf_testmod INSTALL_MOD_PATH=/tmp/output/usr modules_install; \
+        ln -s usr/lib /tmp/output/lib; \
     fi
 
 # Build selftests
