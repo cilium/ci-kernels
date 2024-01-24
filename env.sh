@@ -12,6 +12,7 @@ fi
 
 if command -v ccache > /dev/null; then
 	CROSS_COMPILE="ccache $CROSS_COMPILE"
+	export CLANG="ccache ${CLANG:-clang}"
 fi
 
 export ARCH CROSS_COMPILE
