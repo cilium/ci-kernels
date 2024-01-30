@@ -1,0 +1,25 @@
+name: Cleanup Untagged Images
+
+on:
+  workflow_dispatch: []
+  schedule:
+    - cron: '1 23 * * *'
+
+permissions:
+  packages: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Remove untagged images
+      run: |
+        ids=$(gh api -X GET "/orgs/${{ github.repository_owner }}/packages/container/ci-kernels/versions" -f package_type=container -F per_page=2 -q '.[] | select(.metadata.container.tags | length == 0) | .id')
+
+        for id in $ids; do
+            echo "Deleting untagged image with ID: $id"
+            gh api -X DELETE "/orgs/${{ github.repository_owner }}/packages/container/ci-kernels/versions/$id"
+          fi
+        done
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
