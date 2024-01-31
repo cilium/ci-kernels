@@ -2,8 +2,8 @@ name: Cleanup Untagged Images
 
 on:
   workflow_dispatch: {}
-  schedule:
-    - cron: '1 23 * * *'
+  # schedule:
+  #   - cron: '1 23 * * *'
 
 permissions:
   packages: write
