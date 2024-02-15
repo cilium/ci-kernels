@@ -45,9 +45,9 @@ jobs:
         include: ${{ fromJSON(needs.config.outputs.matrix) }}
     with:
       kernel_version: ${{ matrix.version }}
-      build_selftests: ${{ matrix.tag != '' }}
-      build_arm64: ${{ matrix.tag != '' }}
-      static_tag: ${{ matrix.tag }}
+      build_selftests: ${{ matrix.type != 'longterm' }}
+      build_arm64: ${{ matrix.type != 'longterm' }}
+      static_tag: ${{ matrix.type != 'longterm' && matrix.type || '' }}
 
   results:
     if: ${{ always() }}
