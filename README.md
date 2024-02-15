@@ -11,6 +11,14 @@ You can approximate CI by running `buildx.sh`:
 $ ./buildx.sh 6.1 amd64 vmlinux --tag foo:vmlinux
 ```
 
+## Updating versions
+
+Use `update-version.sh` (requires `awk`, `jq` and `xmllint`):
+
+```shell
+./update-versions.sh
+```
+
 ## Updating the configuration
 
 The configuration consists of common options in [config](./config) and platform
