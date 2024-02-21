@@ -29,8 +29,7 @@ RUN --mount=type=cache,target=/ccache \
     ccache -s
 
 # Install vmlinuz
-RUN mkdir -p /tmp/output/boot && \
-    find ./ -type f -name '*Image' -exec cp -v {} /tmp/output/boot/vmlinuz \;
+RUN mkdir -p /tmp/output/boot && cp -v vmlinux /tmp/output/boot/vmlinux
 
 # Install modules in /usr/lib/modules, with a symlink from /lib to
 # /usr/lib. This avoids breaking overlay in merged usr scenarios.
