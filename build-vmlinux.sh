@@ -8,9 +8,7 @@ source env.sh
 
 readonly n="${NPROC:-$(nproc)}"
 
-# Don't specify targets explicitly. This saves us from dealing with
-# arch-specific names for compressed vmlinux.
-taskset -c "0-$((n - 1))" make -j"$n"
+taskset -c "0-$((n - 1))" make -j"$n" vmlinux modules
 
 if [ -d "tools/testing/selftests/bpf/bpf_testmod" ]; then
 	make M=tools/testing/selftests/bpf/bpf_testmod modules
