@@ -36,10 +36,10 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Cache ccache output
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ccache
-        key: ccache-${{ inputs.kernel_version }}-${{ hashFiles('config') }}
+        key: ccache-${{ inputs.kernel_version }}-${{ hashFiles('config-*') }}
 
     - name: Inject ccache into builder
       uses: reproducible-containers/buildkit-cache-dance@v2.1.3
@@ -63,6 +63,22 @@ jobs:
         annotations: |
           org.opencontainers.image.licenses=GPLv2
 
+    - name: Kernel metadata (debug)
+      id: debug-meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository_owner }}/ci-kernels
+        flavor: latest=false
+        tags: |
+          type=raw,value=${{ inputs.kernel_version }},suffix=-debug
+          type=match,pattern=^\d+\.\d+,group=0,value=${{ inputs.kernel_version }},suffix=-debug
+          type=raw,value=${{ inputs.static_tag }},enable=${{ inputs.static_tag != '' }},suffix=-debug
+
+        labels: |
+          org.opencontainers.image.licenses=GPLv2
+        annotations: |
+          org.opencontainers.image.licenses=GPLv2
+
     - name: Selftests metadata
       id: selftests-meta
       uses: docker/metadata-action@v5
@@ -72,7 +88,22 @@ jobs:
         tags: |
           type=raw,value=${{ inputs.kernel_version }},suffix=-selftests
           type=match,pattern=^\d+\.\d+,group=0,value=${{ inputs.kernel_version }},suffix=-selftests
-          type=raw,value=${{ inputs.static_tag }},suffix=-selftests,enable=${{ inputs.static_tag != '' }}
+          type=raw,value=${{ inputs.static_tag }},enable=${{ inputs.static_tag != '' }},suffix=-selftests
+        labels: |
+          org.opencontainers.image.licenses=GPLv2
+        annotations: |
+          org.opencontainers.image.licenses=GPLv2
+
+    - name: Selftests metadata (debug)
+      id: selftests-debug-meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository_owner }}/ci-kernels
+        flavor: latest=false
+        tags: |
+          type=raw,value=${{ inputs.kernel_version }},suffix=-selftests-debug
+          type=match,pattern=^\d+\.\d+,group=0,value=${{ inputs.kernel_version }},suffix=-selftests-debug
+          type=raw,value=${{ inputs.static_tag }},enable=${{ inputs.static_tag != '' }},suffix=-selftests-debug
         labels: |
           org.opencontainers.image.licenses=GPLv2
         annotations: |
@@ -101,6 +132,21 @@ jobs:
         annotations: ${{ steps.meta.outputs.annotations }}
         outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/vmlinux' }}
 
+    - name: Build kernel (debug)
+      uses: docker/build-push-action@v5
+      with:
+        target: vmlinux-debug
+        provenance: false
+        platforms: |
+          linux/amd64
+          ${{ inputs.build_arm64 && 'linux/arm64' || '' }}
+        build-args: |
+          KERNEL_VERSION=${{ inputs.kernel_version }}
+        tags: ${{ steps.debug-meta.outputs.tags }}
+        labels: ${{ steps.debug-meta.outputs.labels }}
+        annotations: ${{ steps.debug-meta.outputs.annotations }}
+        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/vmlinux-debug' }}
+
     - name: Build selftests
       if: inputs.build_selftests
       uses: docker/build-push-action@v5
@@ -116,9 +162,24 @@ jobs:
         annotations: ${{ steps.selftests-meta.outputs.annotations }}
         outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/selftests-bpf' }}
 
+    - name: Build selftests (debug)
+      if: inputs.build_selftests
+      uses: docker/build-push-action@v5
+      with:
+        target: selftests-bpf-debug
+        provenance: false
+        platforms: |
+          linux/amd64
+        build-args: |
+          KERNEL_VERSION=${{ inputs.kernel_version }}
+        tags: ${{ steps.selftests-debug-meta.outputs.tags }}
+        labels: ${{ steps.selftests-debug-meta.outputs.labels }}
+        annotations: ${{ steps.selftests-debug-meta.outputs.annotations }}
+        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/selftests-bpf-debug' }}
+
     - name: Store artifacts
       if: github.ref != 'refs/heads/main'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Artifacts (${{ inputs.kernel_version }})
         if-no-files-found: error

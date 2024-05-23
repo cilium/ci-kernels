@@ -8,6 +8,7 @@ CONFIG_HYPERVISOR_GUEST=y
 CONFIG_KVM_GUEST=y
 CONFIG_MAXSMP=y
 CONFIG_PARAVIRT=y
+CONFIG_PVH=y
 
 # Get rid of some drivers and obsolete features
 CONFIG_AGP=n
