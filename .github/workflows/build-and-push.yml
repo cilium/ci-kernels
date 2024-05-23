@@ -16,6 +16,10 @@ on:
         required: false
         type: string
 
+env:
+  # https://github.com/moby/buildkit/blob/master/docs/build-repro.md#source_date_epoch
+  SOURCE_DATE_EPOCH: "1688605200" # Thu  6 Jul 01:00:00 UTC 2023
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -56,12 +60,8 @@ jobs:
 
         labels: |
           org.opencontainers.image.licenses=GPLv2
-          org.opencontainers.image.created=
-          org.opencontainers.image.revision=
         annotations: |
           org.opencontainers.image.licenses=GPLv2
-          org.opencontainers.image.created=
-          org.opencontainers.image.revision=
 
     - name: Selftests metadata
       id: selftests-meta
@@ -75,12 +75,8 @@ jobs:
           type=raw,value=${{ inputs.static_tag }},suffix=-selftests,enable=${{ inputs.static_tag != '' }}
         labels: |
           org.opencontainers.image.licenses=GPLv2
-          org.opencontainers.image.created=
-          org.opencontainers.image.revision=
         annotations: |
           org.opencontainers.image.licenses=GPLv2
-          org.opencontainers.image.created=
-          org.opencontainers.image.revision=
 
     - name: Log in to GitHub Container Registry
       if: github.ref == 'refs/heads/main'
