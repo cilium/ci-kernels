@@ -7,7 +7,7 @@ COPY download.sh .
 
 RUN --mount=type=cache,target=/tmp/kernel ./download.sh
 
-WORKDIR /usr/src/linux-${KERNEL_VERSION}
+WORKDIR /usr/src/linux
 
 COPY ccache.conf /etc/ccache.conf
 
@@ -39,6 +39,14 @@ RUN if [ -d tools/testing/selftests/bpf/bpf_testmod ]; then \
         ln -s usr/lib /tmp/output/lib; \
     fi
 
+FROM build-vmlinux as build-vmlinux-debug
+
+# Package debug info
+RUN mkdir -p /tmp/debug/boot
+
+COPY copy-debug.sh filter-debug.awk .
+RUN ./copy-debug.sh /tmp/debug
+
 # Build selftests
 FROM build-vmlinux as build-selftests
 
@@ -64,8 +72,22 @@ LABEL org.opencontainers.image.licenses=GPL-2.0-only
 
 COPY --from=build-vmlinux /tmp/output /
 
+# Debug
+FROM vmlinux as vmlinux-debug
+
+LABEL org.opencontainers.image.licenses=GPL-2.0-only
+
+COPY --from=build-vmlinux-debug /tmp/debug /
+
 # Prepare the selftests image
 FROM vmlinux as selftests-bpf
+
+LABEL org.opencontainers.image.licenses=GPL-2.0-only
+
+COPY --from=build-selftests /tmp/selftests /usr/src/linux
+
+# Debug
+FROM vmlinux-debug as selftests-bpf-debug
 
 LABEL org.opencontainers.image.licenses=GPL-2.0-only
 

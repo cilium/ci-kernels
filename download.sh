@@ -12,4 +12,5 @@ fi
 
 cd /tmp/kernel
 curl --fail -L --time-cond "linux-${KERNEL_VERSION}.tar.${KERNEL_URL##*.}" -o "linux-${KERNEL_VERSION}.tar.${KERNEL_URL##*.}" "$KERNEL_URL"
-tar -xf "linux-${KERNEL_VERSION}.tar.${KERNEL_URL##*.}" -C /usr/src
+mkdir /usr/src/linux
+tar -xf "linux-${KERNEL_VERSION}.tar.${KERNEL_URL##*.}" --strip-components=1 -C /usr/src/linux

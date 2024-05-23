@@ -22,6 +22,9 @@ CONFIG_VIRTIO_PCI=y
 CONFIG_VIRTIO=y
 CONFIG_VT=y
 
+# Make debugging in gdb work.
+CONFIG_RANDOMIZE_BASE=n
+
 # Enable BPF related things
 # Please sort lines by alphabet ascending.
 CONFIG_BPF_JIT_ALWAYS_ON=y
