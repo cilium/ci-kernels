@@ -19,6 +19,7 @@ COPY llvm.pref /etc/apt/preferences.d
 ARG CLANG_VERSION=16
 ENV CLANG=clang-${CLANG_VERSION}
 ENV LLVM_STRIP=llvm-strip-${CLANG_VERSION}
+ENV LLVM_DWARFDUMP=llvm-dwarfdump-${CLANG_VERSION}
 
 # Update and install dependencies
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -39,7 +40,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         ccache \
         libelf-dev \
         python3-docutils \
-        python3-pip \
         pahole \
         libcap-dev \
         ${CLANG} \
@@ -48,6 +48,3 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         kmod \
         rsync \
         libc6-dev-i386
-
-# Install virtme-configkernel
-RUN pip3 install --break-system-packages https://github.com/amluto/virtme/archive/refs/heads/master.zip
