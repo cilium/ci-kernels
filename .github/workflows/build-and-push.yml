@@ -6,9 +6,6 @@ on:
       kernel_version:
         required: true
         type: string
-      build_selftests:
-        required: true
-        type: boolean
       build_arm64:
         required: true
         type: boolean
@@ -86,8 +83,6 @@ jobs:
         images: ghcr.io/${{ github.repository_owner }}/ci-kernels
         flavor: latest=false
         tags: |
-          type=raw,value=${{ inputs.kernel_version }},suffix=-selftests
-          type=match,pattern=^\d+\.\d+,group=0,value=${{ inputs.kernel_version }},suffix=-selftests
           type=raw,value=${{ inputs.static_tag }},enable=${{ inputs.static_tag != '' }},suffix=-selftests
         labels: |
           org.opencontainers.image.licenses=GPLv2
@@ -101,8 +96,6 @@ jobs:
         images: ghcr.io/${{ github.repository_owner }}/ci-kernels
         flavor: latest=false
         tags: |
-          type=raw,value=${{ inputs.kernel_version }},suffix=-selftests-debug
-          type=match,pattern=^\d+\.\d+,group=0,value=${{ inputs.kernel_version }},suffix=-selftests-debug
           type=raw,value=${{ inputs.static_tag }},enable=${{ inputs.static_tag != '' }},suffix=-selftests-debug
         labels: |
           org.opencontainers.image.licenses=GPLv2
@@ -148,7 +141,7 @@ jobs:
         outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/vmlinux-debug' }}
 
     - name: Build selftests
-      if: inputs.build_selftests
+      if: ${{ inputs.static_tag != '' }}
       uses: docker/build-push-action@v5
       with:
         target: selftests-bpf
@@ -163,7 +156,7 @@ jobs:
         outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/selftests-bpf' }}
 
     - name: Build selftests (debug)
-      if: inputs.build_selftests
+      if: ${{ inputs.static_tag != '' }}
       uses: docker/build-push-action@v5
       with:
         target: selftests-bpf-debug

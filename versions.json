@@ -1,38 +1,38 @@
 [
   {
-    "version": "6.9",
-    "type": "mainline"
+    "version": "6.9.1",
+    "static_tag": "stable"
   },
   {
-    "version": "6.9.1",
-    "type": "stable"
+    "version": "6.9",
+    "static_tag": "mainline"
   },
   {
     "version": "6.8.10",
-    "type": "stable"
+    "static_tag": ""
   },
   {
     "version": "6.6.31",
-    "type": "longterm"
+    "static_tag": "longterm"
   },
   {
     "version": "6.1.91",
-    "type": "longterm"
-  },
-  {
-    "version": "5.15.159",
-    "type": "longterm"
-  },
-  {
-    "version": "5.10.217",
-    "type": "longterm"
+    "static_tag": ""
   },
   {
     "version": "5.4.276",
-    "type": "longterm"
+    "static_tag": ""
+  },
+  {
+    "version": "5.15.159",
+    "static_tag": ""
+  },
+  {
+    "version": "5.10.217",
+    "static_tag": ""
   },
   {
     "version": "4.19.314",
-    "type": "longterm"
+    "static_tag": ""
   }
 ]
