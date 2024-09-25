@@ -17,6 +17,7 @@ COPY llvm.pref /etc/apt/preferences.d
 
 # Bake the appropriate clang version into the container
 ARG CLANG_VERSION=16
+ARG PAHOLE_VERSION=1.27
 ENV CLANG=clang-${CLANG_VERSION}
 ENV LLVM_STRIP=llvm-strip-${CLANG_VERSION}
 ENV LLVM_DWARFDUMP=llvm-dwarfdump-${CLANG_VERSION}
@@ -40,11 +41,25 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         ccache \
         libelf-dev \
         python3-docutils \
-        pahole \
         libcap-dev \
         ${CLANG} \
         llvm-${CLANG_VERSION} \
         lld \
         kmod \
         rsync \
-        libc6-dev-i386
+        libc6-dev-i386 \
+        cmake \
+        libdw-dev \
+        git
+
+RUN cd /tmp && \
+    git clone https://git.kernel.org/pub/scm/devel/pahole/pahole.git && \
+    cd pahole && \
+    git checkout v${PAHOLE_VERSION} && \
+    git submodule update --init --recursive && \
+    mkdir build && \
+    cd build && \
+    cmake -D__LIB=lib -DBUILD_SHARED_LIBS=OFF .. && \
+    make install && \
+    cd / && \
+    rm -rf /tmp/pahole
