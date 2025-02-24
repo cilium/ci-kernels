@@ -39,6 +39,12 @@ RUN if [ -d tools/testing/selftests/bpf/bpf_testmod ]; then \
         ln -s usr/lib /tmp/output/lib; \
     fi
 
+# Starting with v6.14-rc1 the location of testmods has changed.
+RUN if [ -d tools/testing/selftests/bpf/test_kmods ]; then \
+        make M=tools/testing/selftests/bpf/test_kmods INSTALL_MOD_PATH=/tmp/output/usr modules modules_install; \
+        ln -s usr/lib /tmp/output/lib; \
+    fi
+
 FROM build-vmlinux as build-vmlinux-debug
 
 # Package debug info
