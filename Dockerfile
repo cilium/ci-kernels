@@ -45,7 +45,7 @@ RUN if [ -d tools/testing/selftests/bpf/test_kmods ]; then \
         ln -s usr/lib /tmp/output/lib; \
     fi
 
-FROM build-vmlinux as build-vmlinux-debug
+FROM build-vmlinux AS build-vmlinux-debug
 
 # Package debug info
 RUN mkdir -p /tmp/debug/boot
@@ -54,7 +54,7 @@ COPY copy-debug.sh filter-debug.awk .
 RUN ./copy-debug.sh /tmp/debug
 
 # Build selftests
-FROM build-vmlinux as build-selftests
+FROM build-vmlinux AS build-selftests
 
 ARG BUILDPLATFORM
 
@@ -72,28 +72,28 @@ COPY copy-selftests.sh .
 RUN mkdir /tmp/selftests && ./copy-selftests.sh /tmp/selftests
 
 # Prepare the final kernel image
-FROM scratch as vmlinux
+FROM scratch AS vmlinux
 
 LABEL org.opencontainers.image.licenses=GPL-2.0-only
 
 COPY --from=build-vmlinux /tmp/output /
 
 # Debug
-FROM vmlinux as vmlinux-debug
+FROM vmlinux AS vmlinux-debug
 
 LABEL org.opencontainers.image.licenses=GPL-2.0-only
 
 COPY --from=build-vmlinux-debug /tmp/debug /
 
 # Prepare the selftests image
-FROM vmlinux as selftests-bpf
+FROM vmlinux AS selftests-bpf
 
 LABEL org.opencontainers.image.licenses=GPL-2.0-only
 
 COPY --from=build-selftests /tmp/selftests /usr/src/linux
 
 # Debug
-FROM vmlinux-debug as selftests-bpf-debug
+FROM vmlinux-debug AS selftests-bpf-debug
 
 LABEL org.opencontainers.image.licenses=GPL-2.0-only
 
