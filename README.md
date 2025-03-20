@@ -11,6 +11,16 @@ You can approximate CI by running `buildx.sh`:
 $ ./buildx.sh 6.1 amd64 vmlinux --tag foo:vmlinux
 ```
 
+To inspect the result of a build:
+
+```shell
+$ ./buildx.sh 6.1 amd64 build-vmlinux-debug
+...
+ => => writing image sha256:18d00182c5495376d87dfef5a4363a1b2cbd936af4f893ab437ce006b0f893d4                             0.0s
+$ docker run -it sha256:18d00182c5495376d87dfef5a4363a1b2cbd936af4f893ab437ce006b0f893d4
+root@1a64a0ade637:/usr/src/linux#
+```
+
 ## Updating versions
 
 Use `update-version.sh` (requires `jq`):
