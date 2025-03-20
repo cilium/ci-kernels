@@ -24,6 +24,7 @@ CONFIG_VT=y
 
 # Make debugging in gdb work.
 CONFIG_RANDOMIZE_BASE=n
+CONFIG_GDB_SCRIPTS=y
 
 # Enable BPF related things
 # Please sort lines by alphabet ascending.
