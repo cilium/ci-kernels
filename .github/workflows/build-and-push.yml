@@ -54,7 +54,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ccache
-        key: ccache-${{ inputs.kernel_version }}-${{ hashFiles('config-*') }}
+        key: ccache-${{ inputs.kernel_version }}-${{ hashFiles('config*') }}
 
     - name: Inject ccache into builder
       uses: reproducible-containers/buildkit-cache-dance@v2.1.3
