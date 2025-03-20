@@ -32,6 +32,24 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
+    - name: Install QEMU
+      if: github.ref != 'refs/heads/main'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends qemu-system-x86
+
+    - name: Set up Go
+      if: github.ref != 'refs/heads/main'
+      uses: actions/setup-go@v4
+      with:
+        go-version: 'stable'
+
+    - name: Install vimto
+      if: github.ref != 'refs/heads/main'
+      run: |
+        CGO_ENABLED=0 go install lmb.io/vimto@latest
+        sudo chmod 0666 /dev/kvm
+
     - name: Cache ccache output
       uses: actions/cache@v4
       with:
@@ -125,6 +143,15 @@ jobs:
         annotations: ${{ steps.meta.outputs.annotations }}
         outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/vmlinux' }}
 
+    - name: Test kernel with vimto
+      if: github.ref != 'refs/heads/main'
+      run: |
+        kernel="/tmp/build/vmlinux"
+        if [ ! -d "$kernel/boot" ]; then
+          kernel="$kernel/linux_$(go env GOARCH)"
+        fi
+        vimto -kernel "$kernel" exec -- /bin/true && echo ok
+
     - name: Build kernel (debug)
       uses: docker/build-push-action@v5
       with:
@@ -139,6 +166,15 @@ jobs:
         labels: ${{ steps.debug-meta.outputs.labels }}
         annotations: ${{ steps.debug-meta.outputs.annotations }}
         outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/vmlinux-debug' }}
+
+    - name: Test debug kernel with vimto
+      if: github.ref != 'refs/heads/main'
+      run: |
+        kernel="/tmp/build/vmlinux-debug"
+        if [ ! -d "$kernel/boot" ]; then
+          kernel="$kernel/linux_$(go env GOARCH)"
+        fi
+        vimto -kernel "$kernel" exec -- /bin/true && echo ok
 
     - name: Build selftests
       if: ${{ inputs.static_tag != '' }}
