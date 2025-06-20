@@ -51,6 +51,7 @@ Add the config to the arch specific files if it isn't available in general.
 
 The builder image is still built manually.
 
-1. `make image`
-2. `make push`
-3. Add files, commit and make a PR.
+1. `make builder`
+2. Test a build via instruction above.
+3. `make push`
+4. Add files, commit and make a PR.
