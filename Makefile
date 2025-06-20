@@ -1,10 +1,10 @@
 IMAGE := ghcr.io/cilium/ci-kernels-builder
 VERSION := $(file <VERSION)
 
-.PHONY: image push
+.PHONY: builder push
 
-image: EPOCH := $(shell date +'%s')
-image:
+builder: EPOCH := $(shell date +'%s')
+builder:
 	docker build --no-cache -f Dockerfile.builder . -t "$(IMAGE):$(EPOCH)"
 	sed 's|$(IMAGE):[0-9]\+|$(IMAGE):$(EPOCH)|' -i Dockerfile
 	echo $(EPOCH) > VERSION

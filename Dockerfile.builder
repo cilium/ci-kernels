@@ -1,6 +1,6 @@
 FROM debian:bookworm
 
-LABEL org.opencontainers.image.source https://github.com/cilium/ci-kernels
+LABEL org.opencontainers.image.source=https://github.com/cilium/ci-kernels
 
 # Preserve the APT cache between runs
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
@@ -16,9 +16,12 @@ COPY llvm.list /etc/apt/sources.list.d
 COPY llvm.pref /etc/apt/preferences.d
 
 # Bake the appropriate clang version into the container
-ARG CLANG_VERSION=16
+ARG CLANG_VERSION=19
 ARG PAHOLE_VERSION=1.27
 ENV CLANG=clang-${CLANG_VERSION}
+ENV LLC=llc-${CLANG_VERSION}
+ENV LLVM_OBJCOPY=llvm-objcopy-${CLANG_VERSION}
+ENV LLVM_READELF=llvm-readelf-${CLANG_VERSION}
 ENV LLVM_STRIP=llvm-strip-${CLANG_VERSION}
 ENV LLVM_DWARFDUMP=llvm-dwarfdump-${CLANG_VERSION}
 
