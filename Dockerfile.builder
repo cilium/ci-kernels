@@ -53,7 +53,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libc6-dev-i386 \
         cmake \
         libdw-dev \
-        git
+        git \
+        xxd
 
 RUN cd /tmp && \
     git clone https://git.kernel.org/pub/scm/devel/pahole/pahole.git && \
