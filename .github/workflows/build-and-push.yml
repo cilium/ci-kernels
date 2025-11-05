@@ -69,8 +69,8 @@ jobs:
         images: ghcr.io/${{ github.repository_owner }}/ci-kernels
         flavor: latest=false
         tags: |
-          type=raw,value=${{ inputs.kernel_version }}
-          type=match,pattern=^\d+\.\d+,group=0,value=${{ inputs.kernel_version }}
+          type=pep440,pattern={{major}}.{{minor}},value=${{ inputs.kernel_version }}
+          type=pep440,pattern={{major}}.{{minor}}.{{patch}},value=${{ inputs.kernel_version }}
           type=raw,value=${{ inputs.static_tag }},enable=${{ inputs.static_tag != '' }}
 
         labels: |
@@ -85,8 +85,8 @@ jobs:
         images: ghcr.io/${{ github.repository_owner }}/ci-kernels
         flavor: latest=false
         tags: |
-          type=raw,value=${{ inputs.kernel_version }},suffix=-debug
-          type=match,pattern=^\d+\.\d+,group=0,value=${{ inputs.kernel_version }},suffix=-debug
+          type=pep440,pattern={{major}}.{{minor}},value=${{ inputs.kernel_version }},suffix=-debug
+          type=pep440,pattern={{major}}.{{minor}}.{{patch}},value=${{ inputs.kernel_version }},suffix=-debug
           type=raw,value=${{ inputs.static_tag }},enable=${{ inputs.static_tag != '' }},suffix=-debug
 
         labels: |
