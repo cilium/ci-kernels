@@ -4,7 +4,9 @@
 set -eu
 set -o pipefail
 
-source env.sh
+dir="$(dirname "$(realpath "$0")")"
+
+source "$dir/env.sh"
 
 readonly n="${NPROC:-$(nproc)}"
 
