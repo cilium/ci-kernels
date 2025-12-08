@@ -141,7 +141,7 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         annotations: ${{ steps.meta.outputs.annotations }}
-        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/vmlinux' }}
+        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=tar,dest=/tmp/build/vmlinux.tar' }}
 
     - name: Test kernel with vimto
       if: github.ref != 'refs/heads/main'
@@ -165,7 +165,7 @@ jobs:
         tags: ${{ steps.debug-meta.outputs.tags }}
         labels: ${{ steps.debug-meta.outputs.labels }}
         annotations: ${{ steps.debug-meta.outputs.annotations }}
-        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/vmlinux-debug' }}
+        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=tar,dest=/tmp/build/vmlinux-debug.tar' }}
 
     - name: Test debug kernel with vimto
       if: github.ref != 'refs/heads/main'
@@ -189,7 +189,7 @@ jobs:
         tags: ${{ steps.selftests-meta.outputs.tags }}
         labels: ${{ steps.selftests-meta.outputs.labels }}
         annotations: ${{ steps.selftests-meta.outputs.annotations }}
-        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/selftests-bpf' }}
+        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=tar,dest=/tmp/build/selftests-bpf.tar' }}
 
     - name: Build selftests (debug)
       if: ${{ inputs.static_tag != '' }}
@@ -204,7 +204,7 @@ jobs:
         tags: ${{ steps.selftests-debug-meta.outputs.tags }}
         labels: ${{ steps.selftests-debug-meta.outputs.labels }}
         annotations: ${{ steps.selftests-debug-meta.outputs.annotations }}
-        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/selftests-bpf-debug' }}
+        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=tar,dest=/tmp/build/selftests-bpf-debug.tar' }}
 
     - name: Store artifacts
       if: github.ref != 'refs/heads/main'
