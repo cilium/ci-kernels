@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM ghcr.io/cilium/ci-kernels-builder:1762183314 AS configure-vmlinux
+FROM --platform=$BUILDPLATFORM ghcr.io/cilium/ci-kernels-builder:1767797740 AS configure-vmlinux
 
 ARG KERNEL_VERSION
 
