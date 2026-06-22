@@ -17,7 +17,7 @@ COPY llvm.pref /etc/apt/preferences.d
 
 # Bake the appropriate clang version into the container
 ARG CLANG_VERSION=19
-ARG PAHOLE_VERSION=1.31
+ARG PAHOLE_VERSION=6fd0dacc9418b103af4245ab300b9c135bcdb383
 ENV CLANG=clang-${CLANG_VERSION}
 ENV LLC=llc-${CLANG_VERSION}
 ENV LLVM_OBJCOPY=llvm-objcopy-${CLANG_VERSION}
@@ -59,7 +59,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 RUN cd /tmp && \
     git clone https://git.kernel.org/pub/scm/devel/pahole/pahole.git && \
     cd pahole && \
-    git checkout v${PAHOLE_VERSION} && \
+    git checkout ${PAHOLE_VERSION} && \
     git submodule update --init --recursive && \
     mkdir build && \
     cd build && \
