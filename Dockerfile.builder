@@ -1,4 +1,4 @@
-FROM debian:bookworm
+FROM debian:trixie
 
 LABEL org.opencontainers.image.source=https://github.com/cilium/ci-kernels
 
@@ -11,12 +11,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get install -y --no-install-recommends \
         ca-certificates
 
-COPY llvm-snapshot.gpg /usr/share/keyrings
-COPY llvm.list /etc/apt/sources.list.d
-COPY llvm.pref /etc/apt/preferences.d
+COPY llvm-snapshot.gpg.key /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+COPY llvm.list /etc/apt/sources.list.d/
+COPY llvm.pref /etc/apt/preferences.d/
 
 # Bake the appropriate clang version into the container
-ARG CLANG_VERSION=19
+ARG CLANG_VERSION=22
 ARG PAHOLE_VERSION=6fd0dacc9418b103af4245ab300b9c135bcdb383
 ENV CLANG=clang-${CLANG_VERSION}
 ENV LLC=llc-${CLANG_VERSION}
