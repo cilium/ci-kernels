@@ -45,7 +45,7 @@ jobs:
         include: ${{ fromJSON(needs.config.outputs.matrix) }}
     with:
       kernel_version: ${{ matrix.version }}
-      build_arm64: ${{ matrix.static_tag != '' }}
+      build_arm64: true
       static_tag: ${{ matrix.static_tag }}
 
   results:
