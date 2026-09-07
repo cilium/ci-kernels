@@ -25,11 +25,19 @@ ENV LLVM_READELF=llvm-readelf-${CLANG_VERSION}
 ENV LLVM_STRIP=llvm-strip-${CLANG_VERSION}
 ENV LLVM_DWARFDUMP=llvm-dwarfdump-${CLANG_VERSION}
 
-# Update and install dependencies
+
+# Update and install dependencies.
+#
+# Kernels 5.15 and earlier build libbpf as part of bpf_preload_umd, which
+# depends on libelf and zlib, requiring their ARM64 versions to be installed.
+# arm64 dependencies can be removed when 5.15 is no longer maintained.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    dpkg --add-architecture arm64 && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
+        libelf-dev:arm64 \
+        zlib1g-dev:arm64 \
         curl \
         tar \
         build-essential \
