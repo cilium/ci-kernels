@@ -9,7 +9,7 @@ from dataclasses import dataclass
 RELEASES_URL = "https://www.kernel.org/releases.json"
 OCI_REPOSITORY = "ghcr.io/cilium/ci-kernels"
 
-VERSIONS = "versions.json"
+VERSIONS = "matrix/versions.json"
 README = "README.md"
 BEGIN_MARKER = "<!-- versions:begin -->"
 END_MARKER = "<!-- versions:end -->"
