@@ -7,8 +7,12 @@ import urllib.request
 from dataclasses import dataclass
 
 RELEASES_URL = "https://www.kernel.org/releases.json"
+OCI_REPOSITORY = "ghcr.io/cilium/ci-kernels"
 
 VERSIONS = "versions.json"
+README = "README.md"
+BEGIN_MARKER = "<!-- versions:begin -->"
+END_MARKER = "<!-- versions:end -->"
 
 
 @dataclass
@@ -56,6 +60,32 @@ def wanted(release):
     """No images are built for EOL kernels or linux-next."""
     return not release["iseol"] and release["moniker"] != "linux-next"
 
+
+def render_table(releases):
+    lines: list[str] = [
+        "| Version | Channel | Image | Tag |",
+        "|---|---|---|---|",
+    ]
+
+    for release in releases:
+        lines.append(f"| {release.version} | {release.channel} | `{OCI_REPOSITORY}:{release.version}` | {release.image_tag} |")
+
+    return "\n".join(lines)
+
+
+def update_readme(releases: list[Release], filename: str):
+    """Replace the contents between the version markers in README.md."""
+    with open(filename) as f:
+        readme: str = f.read()
+
+    begin: int = readme.index(BEGIN_MARKER) + len(BEGIN_MARKER)
+    end: int = readme.index(END_MARKER)
+
+    with open(filename, "w") as f:
+        f.write(readme[:begin] + "\n")
+        f.write(render_table(releases) + "\n")
+        f.write(readme[end:])
+
 def from_json_sorted(raw: list[dict[str, Any]]) -> list[Release]:
     """Unmarshal a list of JSON releases and return them sorted in descending
     order by version."""
@@ -90,6 +120,8 @@ def main():
     tag_releases(releases)
 
     write_json(releases, VERSIONS)
+
+    update_readme(releases, README)
 
 if __name__ == "__main__":
     main()
