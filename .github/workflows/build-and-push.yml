@@ -6,9 +6,6 @@ on:
       kernel_version:
         required: true
         type: string
-      build_arm64:
-        required: true
-        type: boolean
       image_tag:
         required: false
         type: string
@@ -135,7 +132,7 @@ jobs:
         provenance: false
         platforms: |
           linux/amd64
-          ${{ inputs.build_arm64 && 'linux/arm64' || '' }}
+          linux/arm64
         build-args: |
           KERNEL_VERSION=${{ inputs.kernel_version }}
         tags: ${{ steps.meta.outputs.tags }}
@@ -159,7 +156,7 @@ jobs:
         provenance: false
         platforms: |
           linux/amd64
-          ${{ inputs.build_arm64 && 'linux/arm64' || '' }}
+          linux/arm64
         build-args: |
           KERNEL_VERSION=${{ inputs.kernel_version }}
         tags: ${{ steps.debug-meta.outputs.tags }}
