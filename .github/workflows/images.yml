@@ -46,7 +46,7 @@ jobs:
     with:
       kernel_version: ${{ matrix.version }}
       build_arm64: true
-      static_tag: ${{ matrix.static_tag }}
+      image_tag: ${{ matrix.image_tag }}
 
   results:
     if: ${{ always() }}
