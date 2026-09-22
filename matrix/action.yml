@@ -1,0 +1,43 @@
+name: Kernel test matrix
+description:
+  Emits the kernel versions supported by ci-kernels as a JSON array, for use as
+  a test matrix. Entries have the same fields as they do in versions.json,
+  sorted in descending order by version.
+
+inputs:
+  channel:
+    description:
+      Only emit versions in this channel (mainline, stable, longterm).
+      The default emits all channels.
+    default: ""
+  latest-only:
+    description: Only emit the latest version of every channel.
+    default: "false"
+
+outputs:
+  matrix:
+    description: JSON array of kernel versions.
+    value: ${{ steps.filter.outputs.matrix }}
+
+runs:
+  using: composite
+  steps:
+    - name: Generate ci-kernels Test Matrix
+      id: filter
+      shell: bash
+      env:
+        CHANNEL: ${{ inputs.channel }}
+        LATEST: ${{ inputs.latest-only }}
+      # unique_by picks the first entry per channel, which is the newest
+      # since versions.json is sorted in descending order.
+      run: |
+        {
+          echo "matrix<<EOF"
+          jq --arg channel "$CHANNEL" --argjson latest "${LATEST:-false}" '
+            map(select(
+              $channel == "" or .channel == $channel
+            ))
+            | if $latest then unique_by(.channel) else .
+          end' "$GITHUB_ACTION_PATH/../versions.json"
+          echo "EOF"
+        } | tee -a "$GITHUB_OUTPUT"
