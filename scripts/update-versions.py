@@ -3,6 +3,7 @@
 
 from typing import Any
 import json
+import os
 import urllib.request
 from dataclasses import dataclass
 
@@ -111,6 +112,10 @@ def tag_releases(releases: list[Release]) -> None:
             tagged.add(r.channel)
             r.image_tag = r.channel
 
+def absolute(path: str) -> str:
+    """Return the absolute path relative to the repository root."""
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", path)
+
 def main():
     with urllib.request.urlopen(RELEASES_URL) as resp:
         raw = json.load(resp)["releases"]
@@ -119,9 +124,9 @@ def main():
 
     tag_releases(releases)
 
-    write_json(releases, VERSIONS)
+    write_json(releases, absolute(VERSIONS))
 
-    update_readme(releases, README)
+    update_readme(releases, absolute(README))
 
 if __name__ == "__main__":
     main()
