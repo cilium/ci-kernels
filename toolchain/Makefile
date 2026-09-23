@@ -5,8 +5,8 @@ VERSION := $(file <VERSION)
 
 builder: EPOCH := $(shell date +'%s')
 builder:
-	docker build --no-cache -f Dockerfile.builder . -t "$(IMAGE):$(EPOCH)"
-	sed 's|$(IMAGE):[0-9]\+|$(IMAGE):$(EPOCH)|' -i Dockerfile
+	docker build --no-cache . -t "$(IMAGE):$(EPOCH)"
+	sed 's|$(IMAGE):[0-9]\+|$(IMAGE):$(EPOCH)|' -i ../build/Dockerfile
 	echo $(EPOCH) > VERSION
 
 push:

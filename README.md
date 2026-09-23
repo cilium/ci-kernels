@@ -43,38 +43,53 @@ See `vimto --help` for more information.
 
 ## Bumping Kernel Versions
 
-1. `./update-versions.py`
+1. `./scripts/update-versions.py`
 2. Commit and make a PR.
 
 ## Building Locally
 
-You can approximate CI by running `buildx.sh`:
+You can approximate CI by running `scripts/buildx.sh`:
 
 ```shell
-$ ./buildx.sh 6.1 amd64 vmlinux --tag foo:vmlinux
+$ ./scripts/buildx.sh 6.1 amd64 vmlinux --tag foo:vmlinux
 ```
 
 To inspect the result of a build:
 
 ```shell
-$ ./buildx.sh 6.1 amd64 build-vmlinux-debug
+$ ./scripts/buildx.sh 6.1 amd64 build-vmlinux-debug
 ...
  => => writing image sha256:18d00182c5495376d87dfef5a4363a1b2cbd936af4f893ab437ce006b0f893d4                             0.0s
 $ docker run -it sha256:18d00182c5495376d87dfef5a4363a1b2cbd936af4f893ab437ce006b0f893d4
 root@1a64a0ade637:/usr/src/linux#
 ```
 
+## Publishing images manually
+
+CI builds candidate images on pull requests, named after the kernel version plus
+a hash of the [build](./build) directory. Merging to main normally just retags
+the already-tested candidates. If that fails (e.g. for fork PRs, which cannot
+push candidates), promotion falls back to building on main. To break-glass the
+process by hand from the merged commit:
+
+```shell
+$ docker login ghcr.io
+$ ./scripts/buildx.sh 6.12.111 amd64,arm64 vmlinux --tag "ghcr.io/cilium/ci-kernels:$(./scripts/candidate-tag.sh 6.12.111)" --push
+$ ./scripts/promote.sh 6.12.111
+```
+
 ## Updating the configuration
 
-The configuration consists of common options in [config](./config) and platform
-specific options in [config-arm64](./config-arm64) and [config-x64_64](./config-x86_64).
+The configuration consists of common options in [config](./build/config) and
+platform specific options in [config-arm64](./build/config-arm64) and
+[config-x64_64](./build/config-x86_64).
 
 To add a new config option:
 
-1. Try adding it to `config` (keep sorted alphabetically)
+1. Try adding it to `build/config` (keep sorted alphabetically)
 2. In a checkout of the Linux source code:
    ```shell
-   TARGETPLATFORM=linux/arm64 /path/to/configure-vmlinux.sh
+   TARGETPLATFORM=linux/arm64 /path/to/build/configure-vmlinux.sh
    ```
 3. If any symbols are missing you can now run `make menuconfig` and search for
    the missing symbols. Figure out which dependencies are missing and add them
