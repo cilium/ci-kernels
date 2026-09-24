@@ -18,23 +18,18 @@ concurrency:
 
 jobs:
   config:
-    name: Read config
+    name: Read kernel versions
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.kernel.outputs.matrix }}
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
-    - name: Read versions.json
+    - name: Kernel Test Matrix
       id: kernel
-      run: |
-        {
-          echo "matrix<<EOF"
-          cat versions.json
-          echo -e "\nEOF"
-        } | tee -a "$GITHUB_OUTPUT"
+      uses: ./matrix
 
   kernel:
     name: Kernel
@@ -45,19 +40,14 @@ jobs:
         include: ${{ fromJSON(needs.config.outputs.matrix) }}
     with:
       kernel_version: ${{ matrix.version }}
-      build_arm64: true
-      static_tag: ${{ matrix.static_tag }}
+      image_tag: ${{ matrix.image_tag }}
 
   results:
+    # Always run, even if kernel job fails.
     if: ${{ always() }}
     runs-on: ubuntu-latest
     name: Results
-    needs:
-    - kernel
+    needs: kernel
     steps:
     - run: exit 1
-      if: >-
-        ${{
-              contains(needs.*.result, 'failure')
-          || contains(needs.*.result, 'cancelled')
-        }}
+      if: ${{ needs.kernel.result != 'success' }}

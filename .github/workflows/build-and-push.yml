@@ -1,21 +1,40 @@
+# This workflow idempotently builds and pushes kernel CI images wrapped in an
+# OCI image to an OCI registry, where it can be pulled by tools like vimto.
+#
+# Builds are content-addressable based on the version and a hash of the files in
+# the build/ directory. Merging to main will promote all built images by
+# applying an unsuffixed tag, e.g. 7.2.7-abcdef will be tagged as 7.2.7. The
+# latest releases in every given channel ('channel leaders', e.g.
+# mainline/stable/longterm) also receive the channel's name as a floating tag.
+#
+# Selftests are built only for channel leaders. If a selftest build fails, it is
+# skipped and reported in the CI summary, and its tag (like 'stable-selftests')
+# is left untouched, leaving it pointing to the previous successful build. These
+# failures should always be investigated and addressed if it concerns an error
+# on the builder side.
+
 name: Build and Push
 
 on:
   workflow_call:
     inputs:
       kernel_version:
+        description:
+          The kernel version to be built as it appears in versions.json.
         required: true
         type: string
-      build_arm64:
-        required: true
-        type: boolean
-      static_tag:
+      image_tag:
+        description:
+          The release's image_tag field in versions.json. Only set for the
+          single latest release of each channel, e.g. mainline, stable,
+          longterm.
         required: false
         type: string
 
 env:
   # https://github.com/moby/buildkit/blob/master/docs/build-repro.md#source_date_epoch
   SOURCE_DATE_EPOCH: "1688605200" # Thu  6 Jul 01:00:00 UTC 2023
+  IMAGE: ghcr.io/${{ github.repository_owner }}/ci-kernels
 
 jobs:
   build-and-push:
@@ -27,187 +46,206 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Install QEMU
-      if: github.ref != 'refs/heads/main'
+    - name: Configuration
+      id: config
+      env:
+        VERSION: ${{ inputs.kernel_version }}
       run: |
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends qemu-system-x86
-
-    - name: Set up Go
-      if: github.ref != 'refs/heads/main'
-      uses: actions/setup-go@v4
-      with:
-        go-version: 'stable'
-
-    - name: Install vimto
-      if: github.ref != 'refs/heads/main'
-      run: |
-        CGO_ENABLED=0 go install lmb.io/vimto@latest
-        sudo chmod 0666 /dev/kvm
-
-    - name: Cache ccache output
-      uses: actions/cache@v4
-      with:
-        path: ccache
-        key: ccache-${{ inputs.kernel_version }}-${{ hashFiles('config*') }}
-
-    - name: Inject ccache into builder
-      uses: reproducible-containers/buildkit-cache-dance@v2.1.3
-      with:
-        cache-source: ccache
-        cache-target: /ccache
-
-    - name: Kernel metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ghcr.io/${{ github.repository_owner }}/ci-kernels
-        flavor: latest=false
-        tags: |
-          type=pep440,pattern={{major}}.{{minor}},value=${{ inputs.kernel_version }}
-          type=pep440,pattern={{major}}.{{minor}}.{{patch}},value=${{ inputs.kernel_version }}
-          type=raw,value=${{ inputs.static_tag }},enable=${{ inputs.static_tag != '' }}
-
-        labels: |
-          org.opencontainers.image.licenses=GPLv2
-        annotations: |
-          org.opencontainers.image.licenses=GPLv2
-
-    - name: Kernel metadata (debug)
-      id: debug-meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ghcr.io/${{ github.repository_owner }}/ci-kernels
-        flavor: latest=false
-        tags: |
-          type=pep440,pattern={{major}}.{{minor}},value=${{ inputs.kernel_version }},suffix=-debug
-          type=pep440,pattern={{major}}.{{minor}}.{{patch}},value=${{ inputs.kernel_version }},suffix=-debug
-          type=raw,value=${{ inputs.static_tag }},enable=${{ inputs.static_tag != '' }},suffix=-debug
-
-        labels: |
-          org.opencontainers.image.licenses=GPLv2
-        annotations: |
-          org.opencontainers.image.licenses=GPLv2
-
-    - name: Selftests metadata
-      id: selftests-meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ghcr.io/${{ github.repository_owner }}/ci-kernels
-        flavor: latest=false
-        tags: |
-          type=raw,value=${{ inputs.static_tag }},enable=${{ inputs.static_tag != '' }},suffix=-selftests
-        labels: |
-          org.opencontainers.image.licenses=GPLv2
-        annotations: |
-          org.opencontainers.image.licenses=GPLv2
-
-    - name: Selftests metadata (debug)
-      id: selftests-debug-meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ghcr.io/${{ github.repository_owner }}/ci-kernels
-        flavor: latest=false
-        tags: |
-          type=raw,value=${{ inputs.static_tag }},enable=${{ inputs.static_tag != '' }},suffix=-selftests-debug
-        labels: |
-          org.opencontainers.image.licenses=GPLv2
-        annotations: |
-          org.opencontainers.image.licenses=GPLv2
+        {
+          echo "candidate=$(scripts/candidate-tag.sh "$VERSION")"
+          # Fork PRs get a read-only token and can't push candidates.
+          echo "push=${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}"
+        } | tee -a "$GITHUB_OUTPUT"
 
     - name: Log in to GitHub Container Registry
-      if: github.ref == 'refs/heads/main'
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Check for existing candidate images
+      id: exists
+      env:
+        CANDIDATE: ${{ steps.config.outputs.candidate }}
+        IMAGE_TAG: ${{ inputs.image_tag }}
+      run: |
+        exists() {
+          scripts/image-exists.sh "$IMAGE:$1" && echo true || echo false
+        }
+
+        vmlinux="$(exists "$CANDIDATE")"
+        debug="$(exists "$CANDIDATE-debug")"
+        selftests="$(exists "$CANDIDATE-selftests")"
+        selftests_debug="$(exists "$CANDIDATE-selftests-debug")"
+
+        # Selftests are only built for the latest release in a channel.
+        build=false
+        if [ "$vmlinux" = false ] || [ "$debug" = false ]; then
+          build=true
+        elif [ -n "$IMAGE_TAG" ] && { [ "$selftests" = false ] || [ "$selftests_debug" = false ]; }; then
+          build=true
+        fi
+
+        {
+          echo "vmlinux=$vmlinux"
+          echo "debug=$debug"
+          echo "selftests=$selftests"
+          echo "selftests_debug=$selftests_debug"
+          echo "build=$build"
+        } | tee -a "$GITHUB_OUTPUT"
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+
+    - name: Install QEMU
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends qemu-system-x86
+
+    - name: Set up Go
+      uses: actions/setup-go@v7
+      with:
+        go-version: 'stable'
+        # Avoid 'Dependencies file is not found in <repo>. Supported file
+        # pattern: go.sum' error, since this project itself is not shipping a Go
+        # program.
+        cache: false
+
+    - name: Install vimto
+      run: |
+        CGO_ENABLED=0 go install lmb.io/vimto@latest
+        sudo chmod 0666 /dev/kvm
+
+    - name: Cache ccache output
+      if: steps.exists.outputs.build == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ccache
+        key: ccache-${{ inputs.kernel_version }}-${{ hashFiles('build/*') }}
+
+    - name: Inject ccache into builder
+      if: steps.exists.outputs.build == 'true'
+      uses: reproducible-containers/buildkit-cache-dance@v2.1.3
+      with:
+        cache-source: ccache
+        cache-target: /ccache
+
     - name: Build kernel
+      if: steps.exists.outputs.vmlinux != 'true'
       uses: docker/build-push-action@v5
       with:
+        context: build
         target: vmlinux
         provenance: false
         platforms: |
           linux/amd64
-          ${{ inputs.build_arm64 && 'linux/arm64' || '' }}
+          linux/arm64
         build-args: |
           KERNEL_VERSION=${{ inputs.kernel_version }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        annotations: ${{ steps.meta.outputs.annotations }}
-        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/vmlinux' }}
+        tags: ${{ env.IMAGE }}:${{ steps.config.outputs.candidate }}
+        outputs: ${{ steps.config.outputs.push == 'true' && 'type=registry' || 'type=local,dest=/tmp/build/vmlinux' }}
 
     - name: Test kernel with vimto
-      if: github.ref != 'refs/heads/main'
+      env:
+        CANDIDATE: ${{ steps.config.outputs.candidate }}
       run: |
         kernel="/tmp/build/vmlinux"
-        if [ ! -d "$kernel/boot" ]; then
-          kernel="$kernel/linux_$(go env GOARCH)"
-        fi
-        vimto -kernel "$kernel" exec -- /bin/true && echo ok
+        [ -d "$kernel" ] || kernel="$IMAGE:$CANDIDATE"
+        scripts/test-kernel.sh "$kernel"
 
     - name: Build kernel (debug)
+      if: steps.exists.outputs.debug != 'true'
       uses: docker/build-push-action@v5
       with:
+        context: build
         target: vmlinux-debug
         provenance: false
         platforms: |
           linux/amd64
-          ${{ inputs.build_arm64 && 'linux/arm64' || '' }}
+          linux/arm64
         build-args: |
           KERNEL_VERSION=${{ inputs.kernel_version }}
-        tags: ${{ steps.debug-meta.outputs.tags }}
-        labels: ${{ steps.debug-meta.outputs.labels }}
-        annotations: ${{ steps.debug-meta.outputs.annotations }}
-        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/vmlinux-debug' }}
+        tags: ${{ env.IMAGE }}:${{ steps.config.outputs.candidate }}-debug
+        outputs: ${{ steps.config.outputs.push == 'true' && 'type=registry' || 'type=local,dest=/tmp/build/vmlinux-debug' }}
 
     - name: Test debug kernel with vimto
-      if: github.ref != 'refs/heads/main'
+      env:
+        CANDIDATE: ${{ steps.config.outputs.candidate }}
       run: |
         kernel="/tmp/build/vmlinux-debug"
-        if [ ! -d "$kernel/boot" ]; then
-          kernel="$kernel/linux_$(go env GOARCH)"
-        fi
-        vimto -kernel "$kernel" exec -- /bin/true && echo ok
+        [ -d "$kernel" ] || kernel="$IMAGE:$CANDIDATE-debug"
+        scripts/test-kernel.sh "$kernel"
 
     - name: Build selftests
-      if: ${{ inputs.static_tag != '' }}
+      id: selftests
+      if: >-
+        inputs.image_tag != '' &&
+        steps.exists.outputs.selftests != 'true'
+      # Selftests break upstream regularly; a trailing -selftests tag is
+      # preferable to blocking kernel version bumps.
+      continue-on-error: true
       uses: docker/build-push-action@v5
       with:
+        context: build
         target: selftests-bpf
         provenance: false
         platforms: |
           linux/amd64
         build-args: |
           KERNEL_VERSION=${{ inputs.kernel_version }}
-        tags: ${{ steps.selftests-meta.outputs.tags }}
-        labels: ${{ steps.selftests-meta.outputs.labels }}
-        annotations: ${{ steps.selftests-meta.outputs.annotations }}
-        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/selftests-bpf' }}
+        tags: ${{ env.IMAGE }}:${{ steps.config.outputs.candidate }}-selftests
+        outputs: ${{ steps.config.outputs.push == 'true' && 'type=registry' || 'type=local,dest=/tmp/build/selftests-bpf' }}
 
     - name: Build selftests (debug)
-      if: ${{ inputs.static_tag != '' }}
+      id: selftests-debug
+      # No point attempting the same broken build twice if selftests failed.
+      if: >-
+        inputs.image_tag != '' &&
+        steps.exists.outputs.selftests_debug != 'true' &&
+        steps.selftests.outcome != 'failure'
+      continue-on-error: true
       uses: docker/build-push-action@v5
       with:
+        context: build
         target: selftests-bpf-debug
         provenance: false
         platforms: |
           linux/amd64
         build-args: |
           KERNEL_VERSION=${{ inputs.kernel_version }}
-        tags: ${{ steps.selftests-debug-meta.outputs.tags }}
-        labels: ${{ steps.selftests-debug-meta.outputs.labels }}
-        annotations: ${{ steps.selftests-debug-meta.outputs.annotations }}
-        outputs: ${{ github.ref == 'refs/heads/main' && 'type=registry' || 'type=local,dest=/tmp/build/selftests-bpf-debug' }}
+        tags: ${{ env.IMAGE }}:${{ steps.config.outputs.candidate }}-selftests-debug
+        outputs: ${{ steps.config.outputs.push == 'true' && 'type=registry' || 'type=local,dest=/tmp/build/selftests-bpf-debug' }}
+
+    - name: Report tolerated selftests failure
+      if: >-
+        steps.selftests.outcome == 'failure' ||
+        steps.selftests-debug.outcome == 'failure'
+      env:
+        VERSION: ${{ inputs.kernel_version }}
+        IMAGE_TAG: ${{ inputs.image_tag }}
+      run: |
+        echo "::error title=Selftests build failed for $VERSION::No selftests images published. $IMAGE_TAG-selftests(-debug) keeps pointing at the previous version."
+        {
+          echo "## :warning: Selftests build failed for $VERSION"
+          echo
+          echo "No selftests images were published for this version."
+          echo "\`$IMAGE_TAG-selftests\` and \`$IMAGE_TAG-selftests-debug\` keep pointing at the previous version."
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Promote candidate images
+      if: github.ref == 'refs/heads/main'
+      env:
+        VERSION: ${{ inputs.kernel_version }}
+        IMAGE_TAG: ${{ inputs.image_tag }}
+      run: scripts/promote.sh "$VERSION" "$IMAGE_TAG"
 
     - name: Store artifacts
-      if: github.ref != 'refs/heads/main'
+      if: >-
+        steps.config.outputs.push != 'true' &&
+        steps.exists.outputs.build == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: Artifacts (${{ inputs.kernel_version }})
