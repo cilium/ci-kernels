@@ -31,6 +31,21 @@ particular about targeting specific versions.
 
 Images are built for `linux/amd64` and `linux/arm64` targets.
 
+## Image Variants
+
+Each version is published in several variants, distinguished by tag suffix:
+
+| Suffix | Contents |
+|---|---|
+| `-debug` | unstripped `vmlinux`, gdb scripts and DWARF-referenced sources |
+| `-selftests` | the kernel's bpf selftests, only for floating tags (e.g. `stable-selftests`) |
+| `-selftests-debug` | debug build of the bpf selftests |
+
+Selftests builds break upstream regularly and are best-effort: when they fail
+to build, the version bump proceeds anyway and the `-selftests(-debug)` tags
+keep pointing at the last version that built successfully. They may trail the
+other tags of their channel by one or more releases.
+
 ## Running with `vimto`
 
 [vimto](https://github.com/lmb/vimto) is a tool for running interactive programs
