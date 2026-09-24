@@ -109,6 +109,10 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: 'stable'
+        # Avoid 'Dependencies file is not found in <repo>. Supported file
+        # pattern: go.sum' error, since this project itself is not shipping a Go
+        # program.
+        cache: false
 
     - name: Install vimto
       run: |
