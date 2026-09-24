@@ -6,6 +6,12 @@
 # applying an unsuffixed tag, e.g. 7.2.7-abcdef will be tagged as 7.2.7. The
 # latest releases in every given channel ('channel leaders', e.g.
 # mainline/stable/longterm) also receive the channel's name as a floating tag.
+#
+# Selftests are built only for channel leaders. If a selftest build fails, it is
+# skipped and reported in the CI summary, and its tag (like 'stable-selftests')
+# is left untouched, leaving it pointing to the previous successful build. These
+# failures should always be investigated and addressed if it concerns an error
+# on the builder side.
 
 name: Build and Push
 
@@ -170,7 +176,13 @@ jobs:
         scripts/test-kernel.sh "$kernel"
 
     - name: Build selftests
-      if: inputs.image_tag != '' && steps.exists.outputs.selftests != 'true'
+      id: selftests
+      if: >-
+        inputs.image_tag != '' &&
+        steps.exists.outputs.selftests != 'true'
+      # Selftests break upstream regularly; a trailing -selftests tag is
+      # preferable to blocking kernel version bumps.
+      continue-on-error: true
       uses: docker/build-push-action@v5
       with:
         context: build
@@ -184,7 +196,13 @@ jobs:
         outputs: ${{ steps.config.outputs.push == 'true' && 'type=registry' || 'type=local,dest=/tmp/build/selftests-bpf' }}
 
     - name: Build selftests (debug)
-      if: inputs.image_tag != '' && steps.exists.outputs.selftests_debug != 'true'
+      id: selftests-debug
+      # No point attempting the same broken build twice if selftests failed.
+      if: >-
+        inputs.image_tag != '' &&
+        steps.exists.outputs.selftests_debug != 'true' &&
+        steps.selftests.outcome != 'failure'
+      continue-on-error: true
       uses: docker/build-push-action@v5
       with:
         context: build
@@ -196,6 +214,22 @@ jobs:
           KERNEL_VERSION=${{ inputs.kernel_version }}
         tags: ${{ env.IMAGE }}:${{ steps.config.outputs.candidate }}-selftests-debug
         outputs: ${{ steps.config.outputs.push == 'true' && 'type=registry' || 'type=local,dest=/tmp/build/selftests-bpf-debug' }}
+
+    - name: Report tolerated selftests failure
+      if: >-
+        steps.selftests.outcome == 'failure' ||
+        steps.selftests-debug.outcome == 'failure'
+      env:
+        VERSION: ${{ inputs.kernel_version }}
+        IMAGE_TAG: ${{ inputs.image_tag }}
+      run: |
+        echo "::error title=Selftests build failed for $VERSION::No selftests images published. $IMAGE_TAG-selftests(-debug) keeps pointing at the previous version."
+        {
+          echo "## :warning: Selftests build failed for $VERSION"
+          echo
+          echo "No selftests images were published for this version."
+          echo "\`$IMAGE_TAG-selftests\` and \`$IMAGE_TAG-selftests-debug\` keep pointing at the previous version."
+        } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Promote candidate images
       if: github.ref == 'refs/heads/main'

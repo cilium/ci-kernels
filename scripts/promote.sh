@@ -16,6 +16,10 @@ Usage: $0 <kernel-version> [image-tag]
                   selftests images, which are only built for tagged versions.
                   May be empty, which is the same as omitting it.
 
+Selftests builds break upstream regularly, so missing selftests candidates
+are skipped with a warning: the selftests tags keep pointing at the previous
+version.
+
 The candidate tag is recomputed from the working tree, so run this from the
 commit that produced the candidate images.
 EOF
@@ -70,6 +74,11 @@ promote "" "${tags[@]}"
 promote "-debug" "${tags[@]}"
 
 if [ -n "$image_tag" ]; then
-	promote "-selftests" "$image_tag"
-	promote "-selftests-debug" "$image_tag"
+	if scripts/image-exists.sh "$IMAGE:$candidate-selftests"; then
+		promote "-selftests" "$image_tag"
+		promote "-selftests-debug" "$image_tag"
+	else
+		echo "Warning: $IMAGE:$candidate-selftests does not exist, skipping selftests promotion." >&2
+		echo "$image_tag-selftests still points at the previous version." >&2
+	fi
 fi
