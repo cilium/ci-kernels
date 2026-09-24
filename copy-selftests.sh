@@ -4,11 +4,10 @@
 set -eu
 set -o pipefail
 
-series="$(echo "${KERNEL_VERSION}" | cut -d . -f 1-2)"
-readonly series
-
 readonly output="${1}"
 
+# Include only BPF objects, ignoring ones used for producing statically-linked
+# objects.
 while IFS= read -r obj; do
 	if ! readelf -h "$obj" | grep -q "Linux BPF"; then
 		continue
@@ -25,12 +24,6 @@ while IFS= read -r obj; do
 		continue
 		;;
 	esac
-
-	if [ "${series}" = "4.19" ]; then
-		# Remove .BTF.ext, since .BTF is rewritten by pahole.
-		# See https://lore.kernel.org/bpf/CACAyw9-cinpz=U+8tjV-GMWuth71jrOYLQ05Q7_c34TCeMJxMg@mail.gmail.com/
-		llvm-objcopy --remove-section .BTF.ext "$obj" 1>&2
-	fi
 
 	mkdir -p "${output}/$(dirname "$obj")"
 	cp -v "$obj" "${output}/$(dirname "$obj")"
