@@ -42,6 +42,26 @@ jobs:
       kernel_version: ${{ matrix.version }}
       image_tag: ${{ matrix.image_tag }}
 
+  tag:
+    # Tag the repo so callers of the matrix action can pin a release
+    # and receive updates through Dependabot.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    name: Tag release
+    needs: kernel
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+      with:
+        # tag.sh diffs against the last tag to decide whether to tag at all.
+        fetch-depth: 0
+
+    - name: Tag and push
+      run: scripts/tag.sh --push
+
   results:
     # Always run, even if kernel job fails.
     if: ${{ always() }}
