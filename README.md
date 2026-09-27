@@ -56,6 +56,45 @@ as simple as:
 
 See `vimto --help` for more information.
 
+## Driving a Test Matrix
+
+The [matrix](./matrix) action emits the supported versions as a JSON array,
+for use as a test matrix in other repositories:
+
+```yaml
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+    - id: matrix
+      uses: cilium/ci-kernels/matrix@v7.3
+      with:
+        channel: longterm    # optional: mainline, stable, longterm
+        latest-only: "true"  # optional: one version per channel
+
+  test:
+    needs: matrix
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.matrix.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-go@v7
+      with:
+        go-version: stable
+    - run: go run lmb.io/vimto@latest -kernel ghcr.io/cilium/ci-kernels:${{ matrix.version }} -- go test ./...
+```
+
+Every merge to main that changes [matrix](./matrix) tags this repository as
+`v<mainline major.minor>.<timestamp>`, with floating `v<major>` and
+`v<major>.<minor>` tags following the latest release (see
+[scripts/tag.sh](./scripts/tag.sh)). Pin the tier you're comfortable with:
+`@v7.3` is a good default, and Dependabot picks up rollovers to newer
+major/minor versions as they appear.
+
 ## Bumping Kernel Versions
 
 1. `./scripts/update-versions.py`
