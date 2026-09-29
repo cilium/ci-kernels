@@ -248,7 +248,7 @@ jobs:
       if: >-
         steps.config.outputs.push != 'true' &&
         steps.exists.outputs.build == 'true'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Artifacts (${{ inputs.kernel_version }})
         if-no-files-found: error
