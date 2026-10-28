@@ -14,6 +14,6 @@ readonly n="${NPROC:-$(nproc)}"
 # arch-specific names for compressed vmlinux.
 taskset -c "0-$((n - 1))" make -j"$n"
 
-if [ -d "tools/testing/selftests/bpf/bpf_testmod" ]; then
-	make M=tools/testing/selftests/bpf/bpf_testmod modules
+if [ -n "$TESTMOD_DIR" ]; then
+	make M="$TESTMOD_DIR" modules
 fi

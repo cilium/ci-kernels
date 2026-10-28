@@ -15,4 +15,15 @@ if command -v ccache > /dev/null; then
 	export CLANG="ccache ${CLANG:-clang}"
 fi
 
-export ARCH CROSS_COMPILE
+# Out-of-tree BPF test modules. Moved from bpf_testmod to test_kmods in v6.14.
+for TESTMOD_DIR in tools/testing/selftests/bpf/test_kmods tools/testing/selftests/bpf/bpf_testmod; do
+	[ -d "$TESTMOD_DIR" ] && break
+	TESTMOD_DIR=""
+done
+
+# 5.10 predates bpf_testmod; drop the exception when 5.10 is EOL.
+if [ -z "$TESTMOD_DIR" ] && [ "${KERNEL_VERSION%.*}" != "5.10" ]; then
+	echo "Can't find BPF test modules directory"; exit 1;
+fi
+
+export ARCH CROSS_COMPILE TESTMOD_DIR
