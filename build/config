@@ -12,6 +12,8 @@ CONFIG_OVERLAY_FS=y
 CONFIG_PCI=y
 CONFIG_SYSFS=y
 CONFIG_TMPFS=y
+# Overlayfs opaque directories on a tmpfs upper layer.
+CONFIG_TMPFS_XATTR=y
 CONFIG_TTY=y
 CONFIG_UNIX=y
 CONFIG_UNIX98_PTYS=y
